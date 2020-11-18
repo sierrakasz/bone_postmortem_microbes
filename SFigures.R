@@ -511,3 +511,86 @@ ggplot(Trtdata_filter, aes(x = sample_type, y = Phylum)) +
   ylab('Phyla') + xlab('') + theme(axis.ticks.x=element_blank(),
                                                         axis.text.x=element_blank())
 dev.off()
+
+
+# Figure S6 ---------------------------------------------------------------
+
+#first panel; alpha-diversity amoung years
+
+#calculate diversity metrics
+erich <- estimate_richness(physeq_npn, measures = c("Observed", 'Chao1', "Shannon"))
+erich <- add_rownames(erich, "SampleID")
+#summary stats
+erich_sums <- merge(erich, metadata)
+
+#organize data
+erich <- erich %>%
+  gather(Index, Observation, c("Observed", 'Chao1', "Shannon"), na.rm = TRUE)
+rich = merge(erich, metadata)
+
+#make the plot
+p <- ggplot(rich, aes(x=date_collected, y=Observation, fill=date_collected)) +
+  geom_boxplot(outlier.size = 3)
+a <- p + facet_grid(Index~sample_type, scales = 'free') +
+  scale_fill_manual(values = c("#E38F0F", "#CE0900", "#2F94AE", "#2FAE49",
+                               "#E3C90F", "#AE2F4C", "#562FAE")) +
+  scale_x_discrete(labels=c('1' = 'Year 1', '2' = 'Year 2')) +
+  xlab("") + ylab('Alpha-diversity') + labs(fill = 'Date Collected') + theme_bw(base_size = 20) +
+  theme(panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(legend.position = "right", axis.ticks.x=element_blank(),
+  axis.text.x=element_blank())
+
+a
+
+#second panel; beta-diversity amoung years
+
+#calculate beta div with unifrac dissimilarity matrix
+ord = ordinate(physeq_npn, method="PCoA", distance="unifrac")
+#create plot
+ordplot=plot_ordination(physeq_npn, ord, color="date_collected", shape = 'sample_type') +
+  scale_color_manual(values =  c("#E38F0F", "#CE0900", "#2F94AE", "#2FAE49",
+                                 "#E3C90F", "#AE2F4C", "#562FAE")) +
+  scale_shape_manual(values=c(17,16)) + geom_point(alpha = 0.5, size = 5) + 
+  labs(color = 'Date Collected', shape = "Sample Type")
+
+ordplot
+
+theme_set(theme_classic(base_size = 16))
+tiff("SFIG6.TIF", width = 2500, height = 3500, res=300)
+ggarrange(a, ordplot, 
+          labels = c("A.", "B."),
+          nrow = 2, ncol = 1)
+dev.off()
+
+
+# Figure S7 ---------------------------------------------------------------
+
+x <- transform(dietswap, "compositional")
+otu <- abundances(x)
+metadata <- meta(x)
+
+rda.result <- vegan::rda(t(otu) ~ factor(metadata$nationality),
+                         na.action = na.fail, scale = TRUE)
+
+plot(rda.result, choices = c(1,2), type = "points", pch = 15, scaling = 3, cex = 0.7, col = metadata$time)
+points(rda.result, choices = c(1,2), pch = 15, scaling = 3, cex = 0.7, col = metadata$time)
+pl <- ordihull(rda.result, metadata$nationality, scaling = 3, label = TRUE)
+
+
+data_pca <- transform(physeq_npn, "compositional")
+otu_pca <- abundances(physeq_npn)
+meta_pca <- meta(physeq_npn)
+
+rda.res <- vegan::rda(t(otu_pca) ~ factor(meta_pca$date_collected) + factor(meta_pca$sample_type))
+screeplot(rda.res)
+
+R2 <- RsquareAdj(rda.res)$r.squared
+R2 
+
+plot(rda.res, scaling = 1)
+spe.sc <- scores(otu_pca, choices=1:2, scaling=1, display="sp")
+arrows(0,0,spe.sc[,1], spe.sc[,2], length=0, lty=1, col='red')
+
+ggord(rda.res, meta_pca$date_collected) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())

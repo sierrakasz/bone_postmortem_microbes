@@ -998,3 +998,384 @@ beta_diversity_calc_int <- function(physeq) {
 }
 
 beta_diversity_calc_int(physeq_npn)
+
+# Table S19 ---------------------------------------------------------------
+
+#### core microbiome 
+preparing_data_for_core <- function(physeq) {
+  otus <- data.frame(otu_table(physeq))
+  totus <- data.frame(t(otus))
+  totus$SampleID <- rownames(totus)
+  met <- metadata[,c('SampleID', 'sample_type')]
+  mtotus <- merge(totus, met)
+  mtotus <- mtotus[,-1]
+  mtotus$sample_type <- factor(mtotus$sample_type, 
+                               levels = c('internal_microbiome', 'external_microbiome'))
+  total <- as.vector(colSums(Filter(is.numeric, mtotus)))
+  new_df <- mtotus %>% group_by(sample_type) %>% summarise_all(funs(sum))
+  new_df <- data.frame(t(new_df))
+  colnames(new_df) <- as.character(unlist(new_df[1,]))
+  new_df = new_df[-1, ]
+  new_df$OTU <- rownames(new_df)
+  rownames(new_df) <- NULL
+  Upset <- cbind(new_df, total)
+  return(Upset)
+}
+
+#data ready for core analysis
+all_otus <- preparing_data_for_core(physeq_npn)
+
+#clean up the data
+all_otus <- all_otus %>% filter(total != 0)
+all_otus$internal_microbiome <- as.numeric(as.character(all_otus$internal_microbiome))
+all_otus$external_microbiome <- as.numeric(as.character(all_otus$external_microbiome))
+
+#separate out by microbiome type
+int_otus <- all_otus %>% filter(external_microbiome == 0) %>% 
+  filter(internal_microbiome != 0)
+ex_otus <- all_otus %>% filter(external_microbiome != 0) %>% 
+  filter(internal_microbiome == 0)
+core_otus <- all_otus %>% filter(external_microbiome != 0) %>% 
+  filter(internal_microbiome != 0)
+
+#subset physeq object using the important taxa
+pop_taxa = function(physeq, impTaxa){
+  allTaxa = taxa_names(physeq)
+  allTaxa <- allTaxa[(allTaxa %in% impTaxa)]
+  return(prune_taxa(allTaxa, physeq))
+}
+
+#pull out just taxa names
+impTaxa <- core_otus$OTU
+#additional X in names from some reason, remove it
+impTaxa <- gsub('X', '', impTaxa)
+#new phyloseq obj.
+core_phy <- pop_taxa(physeq_npn, impTaxa)
+core_phy
+
+#pull out just taxa names
+impTaxa <- int_otus$OTU
+#additional X in names from some reason, remove it
+impTaxa <- gsub('X', '', impTaxa)
+#new phyloseq obj.
+#change based on bodysite
+int_phy <- pop_taxa(physeq_npn, impTaxa)
+int_phy
+
+#pull out just taxa names
+impTaxa <- ex_otus$OTU
+#additional X in names from some reason, remove it
+impTaxa <- gsub('X', '', impTaxa)
+#new phyloseq obj.
+#change based on bodysite
+ex_phy <- pop_taxa(physeq_npn, impTaxa)
+ex_phy
+
+#show the numbers of otus present at certain times. 
+find_if_core_increases <- function(physeq) {
+  otus <- data.frame(otu_table(physeq))
+  totus <- data.frame(t(otus))
+  totus$SampleID <- rownames(totus)
+  met <- metadata[,c('SampleID', 'date_collected')]
+  mtotus <- merge(totus, met)
+  mtotus <- mtotus[,-1]
+  mtotus$date_collected <- factor(mtotus$date_collected, 
+                                  levels = c('8/20/2018', '10/25/2018', '1/22/2019',
+                                             '4/23/2019', '7/26/2019', '10/26/2019',
+                                             '1/24/2020'))
+  new_df <- mtotus %>% group_by(date_collected) %>% summarise_all(funs(sum))
+  new_df <- data.frame(t(new_df))
+  colnames(new_df) <- as.character(unlist(new_df[1,]))
+  new_df = new_df[-1, ]
+  new_df$OTU <- rownames(new_df)
+  rownames(new_df) <- NULL
+  new_df <- dplyr::select(new_df, -c(OTU)) 
+  df_bin <- data.frame(sapply(new_df, function(x) as.numeric(as.character(x))))
+  df_bin <- data.frame(sapply(df_bin, function(x) ifelse(x > 0, 1, 0)))
+  
+  total <- as.vector(colSums(Filter(is.numeric, df_bin)))
+  
+  #normalize using alpha-div
+  erich <- estimate_richness(core_phy, measures = c("Observed"))
+  erich <- add_rownames(erich, "SampleID")
+  erich_sums <- merge(erich, metadata)
+  obs <- erich_sums %>% group_by(date_collected) %>% summarise_at(c('Observed'), funs(mean))
+  
+  date <- colnames(new_df)
+  plot_data_df <- data.frame(date,total,obs$Observed)
+  plot_data_df$obs.Observed
+  plot_data_df$total_norm <- plot_data_df$total / plot_data_df$obs.Observed
+  plot_data_df$date <- factor(plot_data_df$date, 
+                              levels = c('8/20/2018', '10/25/2018', '1/22/2019',
+                                         '4/23/2019', '7/26/2019', '10/26/2019',
+                                         '1/24/2020'))
+  
+  return(plot_data_df)
+}
+
+#partition number of core OTUs over time
+core_df <- find_if_core_increases(core_phy)
+
+#change data type for linear/quadratic models
+core_df$date_num <- as.numeric(core_df$date)
+
+#quadratic normalized by alpha-diversity
+m1 <- lm(date_num ~ poly(total_norm), data = core_df)
+summary(m1)
+
+#linear normalized by alpha-diversity
+m2 <- lm(date_num ~ total_norm, data = core_df)
+summary(m2)
+
+
+####best model
+#quadratic
+m3 <- lm(date_num ~ poly(total), data = core_df)
+summary(m3)
+#look at slope, increasing at different rates? 
+m3
+
+#linear
+m4 <- lm(date_num ~ total, data = core_df)
+summary(m4)
+
+#partition number of external OTUs over time
+ex_df <- find_if_core_increases(ex_phy)
+
+#change data type for linear/quadratic models
+ex_df$date_num <- as.numeric(ex_df$date)
+
+#quadratic normalized by alpha-diversity
+m1 <- lm(date_num ~ poly(total_norm), data = ex_df)
+summary(m1)
+
+#linear normalized by alpha-diversity
+m2 <- lm(date_num ~ total_norm, data = ex_df)
+summary(m2)
+
+####best model
+#quadratic
+m3 <- lm(date_num ~ poly(total), data = ex_df)
+summary(m3)
+#look at slope, increasing at different rates? 
+m3
+
+#linear
+#overfit
+m4 <- lm(date_num ~ total, data = ex_df)
+summary(m4)
+
+#partition number of internal OTUs over time
+in_df <- find_if_core_increases(int_phy)
+
+#change data type for linear/quadratic models
+in_df$date_num <- as.numeric(in_df$date)
+
+#quadratic normalized by alpha-diversity
+m1 <- lm(date_num ~ poly(total_norm), data = in_df)
+summary(m1)
+
+#linear normalized by alpha-diversity
+m2 <- lm(date_num ~ total_norm, data = in_df)
+summary(m2)
+
+####best model
+#quadratic
+m3 <- lm(date_num ~ poly(total), data = in_df)
+summary(m3)
+m3
+
+#linear
+#overfit
+m4 <- lm(date_num ~ total, data = in_df)
+summary(m4)
+
+
+# Table S20 ---------------------------------------------------------------
+
+#alpha diversity over time (date collected)
+# A
+erich <- estimate_richness(physeq_npn, measures = c("Observed", 'Chao1', "Shannon"))
+erich <- add_rownames(erich, "SampleID")
+erich_sums <- merge(erich, metadata)
+erich_sums %>% group_by(date_collected) %>% summarise_at(c('Observed', 'Chao1', "Shannon"), funs(mean, sd))
+
+# B and C
+
+# get data organized and formatted for stats testing
+erich <- erich %>%
+  gather(Index, Observation, c("Observed", 'Chao1', "Shannon"), na.rm = TRUE)
+rich = merge(erich, metadata)
+
+prepare_samples_kw <- function(rich) {
+  return(list(rich_obs <- rich %>% filter(Index == 'Observed'),
+              rich_cha <- rich %>% filter(Index == 'Chao1'),
+              rich_sha <- rich %>% filter(Index == 'Shannon')))
+}
+
+kw_values <- prepare_samples_kw(rich)
+
+# KW and post-hoc Nemenyi 
+for(i in 1:length(kw_values)) {
+  print(kruskal.test(Observation ~ date_collected, data = kw_values[[i]]))
+  out <- posthoc.kruskal.nemenyi.test(x=kw_values[[i]]$Observation, g=kw_values[[i]]$date_collected, 
+                                      dist='Tukey', p.adjust.method = 'bonf' )
+  print(out$p.value)
+}
+
+# Table S21 ---------------------------------------------------------------
+##beta-diversity over time (date collected)
+# A) summary stats
+# B) PERMANOVA results for comparing beta-diversity and beta-dispersion for 999 permuations. 
+# C) Pairwise PERMANOVA results for comparing beta-diversity 
+# A
+
+#separate out physeq objects
+physeq_time1 <- subset_samples(physeq_npn, date_collected == '8/20/2018')
+physeq_time2 <- subset_samples(physeq_npn, date_collected == '10/25/2018')
+physeq_time3 <- subset_samples(physeq_npn, date_collected == '1/22/2019')
+physeq_time4 <- subset_samples(physeq_npn, date_collected == '4/23/2019')
+physeq_time5 <- subset_samples(physeq_npn, date_collected == '7/26/2019')
+physeq_time6 <- subset_samples(physeq_npn, date_collected == '10/26/2019')
+physeq_time7 <- subset_samples(physeq_npn, date_collected == '1/24/2020')
+
+#calculate unifrac distances 
+dis_unifrac_1 <- UniFrac(physeq_time1, weighted=FALSE, 
+                          normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_1  <- melt(as.matrix(dis_unifrac_1))
+
+dis_unifrac_2 <- UniFrac(physeq_time2, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_2  <- melt(as.matrix(dis_unifrac_2))
+
+dis_unifrac_3 <- UniFrac(physeq_time3, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_3  <- melt(as.matrix(dis_unifrac_3))
+
+dis_unifrac_4 <- UniFrac(physeq_time4, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_4  <- melt(as.matrix(dis_unifrac_4))
+
+dis_unifrac_5 <- UniFrac(physeq_time5, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_5  <- melt(as.matrix(dis_unifrac_5))
+
+dis_unifrac_6 <- UniFrac(physeq_time6, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_6  <- melt(as.matrix(dis_unifrac_6))
+
+dis_unifrac_7 <- UniFrac(physeq_time7, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_7  <- melt(as.matrix(dis_unifrac_7))
+
+
+
+#find the average for each sample
+df_unifrac_1 <- df_unifrac_1[,-1]
+df_unifrac_1_sum <- df_unifrac_1 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_2 <- df_unifrac_2[,-1]
+df_unifrac_2_sum <- df_unifrac_2 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_3 <- df_unifrac_3[,-1]
+df_unifrac_3_sum <- df_unifrac_3 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_4 <- df_unifrac_4[,-1]
+df_unifrac_4_sum <- df_unifrac_4 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_5 <- df_unifrac_5[,-1]
+df_unifrac_5_sum <- df_unifrac_5 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_6 <- df_unifrac_6[,-1]
+df_unifrac_6_sum <- df_unifrac_6 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_7 <- df_unifrac_7[,-1]
+df_unifrac_7_sum <- df_unifrac_7 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+
+#summarize beta-div. 
+mean(df_unifrac_1_sum$value)
+sd(df_unifrac_1_sum$value)
+
+mean(df_unifrac_2_sum$value)
+sd(df_unifrac_2_sum$value)
+
+mean(df_unifrac_3_sum$value)
+sd(df_unifrac_3_sum$value)
+
+mean(df_unifrac_4_sum$value)
+sd(df_unifrac_4_sum$value)
+
+mean(df_unifrac_5_sum$value)
+sd(df_unifrac_5_sum$value)
+
+mean(df_unifrac_6_sum$value)
+sd(df_unifrac_6_sum$value)
+
+mean(df_unifrac_7_sum$value)
+sd(df_unifrac_7_sum$value)
+
+# B 
+beta_diversity_calc_time <- function(physeq) {
+  GPdist=phyloseq::distance(physeq, "unifrac")
+  sampledf <- data.frame(sample_data(physeq))
+  print(return(adonis(GPdist ~ date_collected, data = sampledf)))
+}
+
+beta_dispersion_calc_time <- function(physeq) {
+  GPdist=phyloseq::distance(physeq, "unifrac")
+  sampledf <- data.frame(sample_data(physeq))
+  beta <- betadisper(GPdist, sampledf$date_collected)
+  print(return(permutest(beta)))
+}
+
+beta_diversity_calc_time(physeq_npn)
+beta_dispersion_calc_time(physeq_npn)
+
+# B
+date_pairwise <- function(physeq) {
+  physeq_1 <- subset_samples(physeq, date_collected == '8/20/2018')
+  physeq_2 <- subset_samples(physeq, date_collected == '10/25/2018')
+  physeq_3 <- subset_samples(physeq, date_collected == '1/22/2019')
+  physeq_4 <- subset_samples(physeq, date_collected == '4/23/2019')
+  physeq_5 <- subset_samples(physeq, date_collected == '7/26/2019')
+  physeq_6 <- subset_samples(physeq, date_collected == '10/26/2019')
+  physeq_7 <- subset_samples(physeq, date_collected == '1/24/2020')
+  return(list(physeq_12 <- merge_phyloseq(physeq_1, physeq_2),
+              physeq_13 <- merge_phyloseq(physeq_1, physeq_3),
+              physeq_14 <- merge_phyloseq(physeq_1, physeq_4),
+              physeq_15 <- merge_phyloseq(physeq_1, physeq_5),
+              physeq_16 <- merge_phyloseq(physeq_1, physeq_6),
+              physeq_17 <- merge_phyloseq(physeq_1, physeq_7),
+              physeq_23 <- merge_phyloseq(physeq_2, physeq_3),
+              physeq_24 <- merge_phyloseq(physeq_2, physeq_4),
+              physeq_25 <- merge_phyloseq(physeq_2, physeq_5),
+              physeq_26 <- merge_phyloseq(physeq_2, physeq_6),
+              physeq_27 <- merge_phyloseq(physeq_2, physeq_7),
+              physeq_34 <- merge_phyloseq(physeq_3, physeq_4),
+              physeq_35 <- merge_phyloseq(physeq_3, physeq_5),
+              physeq_36 <- merge_phyloseq(physeq_3, physeq_6),
+              physeq_37 <- merge_phyloseq(physeq_3, physeq_7),
+              physeq_45 <- merge_phyloseq(physeq_4, physeq_5),
+              physeq_46 <- merge_phyloseq(physeq_4, physeq_6),
+              physeq_47 <- merge_phyloseq(physeq_4, physeq_7),
+              physeq_56 <- merge_phyloseq(physeq_5, physeq_6),
+              physeq_57 <- merge_phyloseq(physeq_5, physeq_7),
+              physeq_67 <- merge_phyloseq(physeq_6, physeq_7)))
+}
+
+date_list <- date_pairwise(physeq_npn)
+
+for(i in 1:length(date_list)) {
+  print(beta_diversity_calc_time(date_list[[i]]))
+}
+
+
+

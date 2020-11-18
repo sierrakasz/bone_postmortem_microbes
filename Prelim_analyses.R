@@ -1853,17 +1853,15 @@ for(i in 1:length(kw_values)) {
 kw_values[[1]]$date_num <- as.numeric(kw_values[[1]]$date_collected)
 m1 <- lm(kw_values[[1]]$date_num ~ poly(kw_values[[1]]$Observation))
 summary(m1)
-m1
 
 kw_values[[2]]$date_num <- as.numeric(kw_values[[2]]$date_collected)
 m2 <- lm(kw_values[[2]]$date_num ~ poly(kw_values[[2]]$Observation))
 summary(m2)
-m2
 
 kw_values[[3]]$date_num <- as.numeric(kw_values[[3]]$date_collected)
 m3 <- lm(kw_values[[3]]$date_num ~ poly(kw_values[[3]]$Observation))
 summary(m3)
-m3
+
 
 beta_diversity_calc_time <- function(physeq) {
   GPdist=phyloseq::distance(physeq, "unifrac")
