@@ -2074,3 +2074,52 @@ random_forest_date(physeq_year1)
 #year 2
 physeq_year2 <- subset_samples(physeq_npn, Year == '2')
 random_forest_date(physeq_year2)
+
+
+
+# ADH ---------------------------------------------------------------------
+
+add <- read.csv('meantemp_ADH_Lucas.csv')
+add_sort <- add %>%
+  mutate(Date = as.Date(Date, "%Y-%m-%d")) %>%
+  arrange(Date)
+
+add_model1 <- lm(X ~ CumulativeTemp, data = add)
+summary(add_model1)
+
+add_model2 <- lm(X ~ poly(CumulativeTemp), data = add)
+summary(add_model2)
+
+a <- ggplot(add, aes(y=X, x=CumulativeTemp)) +
+  geom_point(color = '#3E8E18', size=1) + stat_smooth(method = "lm", formula = y ~ x + I(x^3), size = 1) +
+  ylab('Day Since Placement') + xlab('Accumulated Degree Days (ADD)')
+a
+
+#random forest
+otu <- as.data.frame(t(otu_table(physeq_npn)))
+otu$SampleID <- rownames(otu)
+meta_sa <- metadata %>% select(SampleID, date_collected)
+
+#ADD instead of date
+meta_sa_sort <- meta_sa %>%
+  mutate(date_collected = as.Date(date_collected, "%m/%d/%Y")) %>%
+  arrange(date_collected)
+meta_sa_sort$Date <- meta_sa_sort$date_collected
+
+meta_sa_fin <- merge(add_sort, meta_sa_sort, by = 'Date' )
+meta_sa_fin <- meta_sa_fin[,4:5]
+
+otu <- merge(meta_sa_fin, otu, by = 'SampleID')
+otu <- otu[,-1]
+names(otu) <- make.names(names(otu))
+
+m1 <- randomForest(
+  formula = CumulativeTemp ~ .,
+  data    = otu,
+  ntree= 500
+)
+
+m1
+sqrt(m1$mse[which.min(m1$mse)])
+
+            
