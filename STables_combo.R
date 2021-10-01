@@ -1011,6 +1011,7 @@ pig3 <- subset_samples(physeq_npn, pig == '3')
 pig4 <- subset_samples(physeq_npn, pig == '4')
 pig5 <- subset_samples(physeq_npn, pig == '5')
 
+#change this for all of the pigs
 #make sure you delete all the empty rows and columns, throws error
 meta_mic_feast <-Load_metadata(metadata_path = "aquatic_bones_lucas_grant_meta_FEAST_pig1.txt")
 
@@ -1033,20 +1034,140 @@ PlotSourceContribution(SinkNames = rownames(FEAST_output)[c(5:8)],
 
 # Make Boxplots for Source Sink
 FEAST_avg <- read.csv("FEAST_ExIn_percent.csv")
+FEAST_avg$date <- factor(FEAST_avg$date, levels = c('8/20/2018', '10/25/2018', '1/22/2019',
+                                                                      '4/23/2019', '7/26/2019', '10/26/2019',
+                                                                      '1/24/2020'))
 
-p <- ggplot(FEAST_avg, aes(x=dose, y=len)) + 
-  geom_boxplot()
-p
-# TableS5 -----------------------------------------------------------------
+res.aov2 <- aov(Percent_Source ~ date * SourceSink, data = FEAST_avg)
+summary(res.aov2)
 
 
+##mycobiome
+pig1 <- subset_samples(physeq_npn_euk, pig == '1')
+pig2 <- subset_samples(physeq_npn_euk, pig == '2')
+pig3 <- subset_samples(physeq_npn_euk, pig == '3')
+pig4 <- subset_samples(physeq_npn_euk, pig == '4')
+pig5 <- subset_samples(physeq_npn_euk, pig == '5')
+
+#change this for all of the pigs
+#make sure you delete all the empty rows and columns, throws error
+meta_mic_feast <-Load_metadata(metadata_path = "aquatic_bones_lucas_grant_metadata_euks_FEAST_pig4.txt")
+
+otu_mic_feast <- data.frame(otu_table(pig4))
+write.table(otu_mic_feast, 'otu_mic_feast_euks_pig4.txt')
+
+#move over column names by one in excel 
+otu_mic_feast <- Load_CountMatrix(CountMatrix_path = "otu_mic_feast_euks_pig4.txt")
+
+FEAST_output <- FEAST(C = otu_mic_feast, metadata = meta_mic_feast, 
+                      different_sources_flag = 0,
+                      dir_path = "C:/Users/sierr/Documents/Lucas_grant_project/R_scripts",
+                      outfile="micro_FEAST_euk_pig4")
+
+
+# Make Boxplots for Source Sink
+FEAST_avg <- read.csv("FEAST_ExIn_percent_euk.csv")
+FEAST_avg$date <- factor(FEAST_avg$date, levels = c('8/20/2018', '10/25/2018', '1/22/2019',
+                                                    '4/23/2019', '7/26/2019', '10/26/2019',
+                                                    '1/24/2020'))
+
+res.aov2 <- aov(Percent_Source ~ date * SourceSink, data = FEAST_avg)
+summary(res.aov2)
+
+# Table S7 ----------------------------------------------------------------
+
+#A) Microbiome: alpha-diversity interaction among years, seasons, and sample type
+
+erich <- estimate_richness(physeq_npn, measures = c("Observed", 'Chao1', "Shannon"))
+erich <- add_rownames(erich, "SampleID")
+
+# get data organized and formatted for stats testing
+erich <- erich %>%
+  gather(Index, Observation, c("Observed", 'Chao1', "Shannon"), na.rm = TRUE)
+rich = merge(erich, metadata)
+
+prepare_samples_kw <- function(rich) {
+  return(list(rich_obs <- rich %>% filter(Index == 'Observed'),
+              rich_cha <- rich %>% filter(Index == 'Chao1'),
+              rich_sha <- rich %>% filter(Index == 'Shannon')))
+}
+
+kw_values <- prepare_samples_kw(rich)
+
+# ANOVA, including interaction effect
+model = lm(Observation ~ Season:Year:sample_type,
+           data = kw_values[[1]])
+Anova(model,
+      type = "II")
+
+model = lm(Observation ~ Season:Year:sample_type,
+           data = kw_values[[2]])
+Anova(model,
+      type = "II")
+
+model = lm(Observation ~ Season:Year:sample_type,
+           data = kw_values[[3]])
+Anova(model,
+      type = "II")
+
+#B) Mycobiome: alpha-diversity interaction among years, seasons, and sample type
+
+erich <- estimate_richness(physeq_npn_euk, measures = c("Observed", 'Chao1', "Shannon"))
+erich <- add_rownames(erich, "SampleID")
+
+# get data organized and formatted for stats testing
+erich <- erich %>%
+  gather(Index, Observation, c("Observed", 'Chao1', "Shannon"), na.rm = TRUE)
+rich = merge(erich, metadata_euk)
+
+prepare_samples_kw <- function(rich) {
+  return(list(rich_obs <- rich %>% filter(Index == 'Observed'),
+              rich_cha <- rich %>% filter(Index == 'Chao1'),
+              rich_sha <- rich %>% filter(Index == 'Shannon')))
+}
+
+kw_values <- prepare_samples_kw(rich)
+
+# ANOVA, including interaction effect
+model = lm(Observation ~ Season:Year:sample_type,
+           data = kw_values[[1]])
+Anova(model,
+      type = "II")
+
+model = lm(Observation ~ Season:Year:sample_type,
+           data = kw_values[[2]])
+Anova(model,
+      type = "II")
+
+model = lm(Observation ~ Season:Year:sample_type,
+           data = kw_values[[3]])
+Anova(model,
+      type = "II")
+
+#C) Microbiome: beta-diversity interaction effect among years, seasons, and sample type
+beta_diversity_calc_int <- function(physeq) {
+  GPdist=phyloseq::distance(physeq, "unifrac")
+  sampledf <- data.frame(sample_data(physeq))
+  print(return(adonis(GPdist ~ Season * Year * sample_type, data = sampledf)))
+}
+
+beta_diversity_calc_int(physeq_npn)
+
+#D) Mycobiome: beta-diversity interaction effect among years, seasons, and sample type
+beta_diversity_calc_int(physeq_npn_euk)
+
+
+# Table S8 ----------------------------------------------------------------
+
+#microbiomes
 ##alpha-diversity among years
 # A) Mean and standard deviation 
-# B) Kruskal-Wallis test
+# C) Kruskal-Wallis test
 
 # A
+#internal
 #calculate diversity metrics
-erich <- estimate_richness(physeq_npn, measures = c("Observed", 'Chao1', "Shannon"))
+erich <- estimate_richness(physeq_in, measures = c("Observed", 'Chao1', "Shannon"))
 erich <- add_rownames(erich, "SampleID")
 #summary stats
 erich_sums <- merge(erich, metadata)
@@ -1071,43 +1192,210 @@ for(i in 1:length(kw_values)) {
   print(kruskal.test(Observation ~ Year, data = kw_values[[i]]))
 }
 
-# Table S6 ----------------------------------------------------------------
+# external
+#calculate diversity metrics
+erich <- estimate_richness(physeq_ex, measures = c("Observed", 'Chao1', "Shannon"))
+erich <- add_rownames(erich, "SampleID")
+#summary stats
+erich_sums <- merge(erich, metadata)
+erich_sums %>% group_by(Year) %>% summarise_at(c('Observed', 'Chao1', "Shannon"), funs(mean, sd))
+
+# B
+# get data organized and formatted for stats testing
+erich <- erich %>%
+  gather(Index, Observation, c("Observed", 'Chao1', "Shannon"), na.rm = TRUE)
+rich = merge(erich, metadata)
+
+prepare_samples_kw <- function(rich) {
+  return(list(rich_obs <- rich %>% filter(Index == 'Observed'),
+              rich_cha <- rich %>% filter(Index == 'Chao1'),
+              rich_sha <- rich %>% filter(Index == 'Shannon')))
+}
+#list to hold results
+kw_values <- prepare_samples_kw(rich)
+
+# KW
+for(i in 1:length(kw_values)) {
+  print(kruskal.test(Observation ~ Year, data = kw_values[[i]]))
+}
+
+#mycobiomes
+##alpha-diversity among years
+# A) Mean and standard deviation 
+# C) Kruskal-Wallis test
+
+# A
+#internal
+#calculate diversity metrics
+erich <- estimate_richness(physeq_in_euk, measures = c("Observed", 'Chao1', "Shannon"))
+erich <- add_rownames(erich, "SampleID")
+#summary stats
+erich_sums <- merge(erich, metadata_euk)
+erich_sums %>% group_by(Year) %>% summarise_at(c('Observed', 'Chao1', "Shannon"), funs(mean, sd))
+
+# B
+# get data organized and formatted for stats testing
+erich <- erich %>%
+  gather(Index, Observation, c("Observed", 'Chao1', "Shannon"), na.rm = TRUE)
+rich = merge(erich, metadata_euk)
+
+prepare_samples_kw <- function(rich) {
+  return(list(rich_obs <- rich %>% filter(Index == 'Observed'),
+              rich_cha <- rich %>% filter(Index == 'Chao1'),
+              rich_sha <- rich %>% filter(Index == 'Shannon')))
+}
+#list to hold results
+kw_values <- prepare_samples_kw(rich)
+
+# KW
+for(i in 1:length(kw_values)) {
+  print(kruskal.test(Observation ~ Year, data = kw_values[[i]]))
+}
+
+# external
+#calculate diversity metrics
+erich <- estimate_richness(physeq_ex_euk, measures = c("Observed", 'Chao1', "Shannon"))
+erich <- add_rownames(erich, "SampleID")
+#summary stats
+erich_sums <- merge(erich, metadata_euk)
+erich_sums %>% group_by(Year) %>% summarise_at(c('Observed', 'Chao1', "Shannon"), funs(mean, sd))
+
+# B
+# get data organized and formatted for stats testing
+erich <- erich %>%
+  gather(Index, Observation, c("Observed", 'Chao1', "Shannon"), na.rm = TRUE)
+rich = merge(erich, metadata_euk)
+
+prepare_samples_kw <- function(rich) {
+  return(list(rich_obs <- rich %>% filter(Index == 'Observed'),
+              rich_cha <- rich %>% filter(Index == 'Chao1'),
+              rich_sha <- rich %>% filter(Index == 'Shannon')))
+}
+#list to hold results
+kw_values <- prepare_samples_kw(rich)
+
+# KW
+for(i in 1:length(kw_values)) {
+  print(kruskal.test(Observation ~ Year, data = kw_values[[i]]))
+}
+
+
+
+# Table S9 ----------------------------------------------------------------
 
 ##beta-diversity among years
 # A) Beta-diversity mean/ sd among years
 # B) PERMANOVA results for comparing beta-diversity and beta-dispersion 999 permuations. 
 
-# A
+# A microbiome
 #separate out years to get average beta-diversity 
-physeq_year1 <- subset_samples(physeq_npn, Year == '1')
-physeq_year2 <- subset_samples(physeq_npn, Year == '2')
+physeq_year1_in <- subset_samples(physeq_in, Year == '1')
+physeq_year2_in <- subset_samples(physeq_in, Year == '2')
+physeq_year1_ex <- subset_samples(physeq_ex, Year == '1')
+physeq_year2_ex <- subset_samples(physeq_ex, Year == '2')
 
 #calculate unifrac distances 
-dis_unifrac_year1 <- UniFrac(physeq_year1, weighted=FALSE, 
+dis_unifrac_year1_in <- UniFrac(physeq_year1_in, weighted=FALSE, 
                            normalized=TRUE, parallel=FALSE, fast=TRUE)
-df_unifrac_year1  <- melt(as.matrix(dis_unifrac_year1))
+df_unifrac_year1_in  <- melt(as.matrix(dis_unifrac_year1_in))
 
-dis_unifrac_year2 <- UniFrac(physeq_year2, weighted=FALSE, 
+dis_unifrac_year2_in <- UniFrac(physeq_year2_in, weighted=FALSE, 
                              normalized=TRUE, parallel=FALSE, fast=TRUE)
-df_unifrac_year2  <- melt(as.matrix(dis_unifrac_year2))
+df_unifrac_year2_in  <- melt(as.matrix(dis_unifrac_year2_in))
+
+dis_unifrac_year1_ex <- UniFrac(physeq_year1_ex, weighted=FALSE, 
+                             normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_year1_ex  <- melt(as.matrix(dis_unifrac_year1_ex))
+
+dis_unifrac_year2_ex <- UniFrac(physeq_year2_ex, weighted=FALSE, 
+                             normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_year2_ex  <- melt(as.matrix(dis_unifrac_year2_ex))
 
 #find the average for each sample
-df_unifrac_year1 <- df_unifrac_year1[,-1]
-df_unifrac_year1_sum <- df_unifrac_year1 %>% group_by(Var2) %>% 
+df_unifrac_year1_in <- df_unifrac_year1_in[,-1]
+df_unifrac_year1_in_sum <- df_unifrac_year1_in %>% group_by(Var2) %>% 
   summarize_at(c('value'), funs(mean))
 
-df_unifrac_year2 <- df_unifrac_year2[,-1]
-df_unifrac_year2_sum <- df_unifrac_year2 %>% group_by(Var2) %>% 
+df_unifrac_year2_in <- df_unifrac_year2_in[,-1]
+df_unifrac_year2_in_sum <- df_unifrac_year2_in %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_year1_ex <- df_unifrac_year1_ex[,-1]
+df_unifrac_year1_ex_sum <- df_unifrac_year1_ex %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_year2_ex <- df_unifrac_year2_ex[,-1]
+df_unifrac_year2_ex_sum <- df_unifrac_year2_ex %>% group_by(Var2) %>% 
   summarize_at(c('value'), funs(mean))
 
 #summarize beta-div. 
-mean(df_unifrac_year1_sum$value)
-sd(df_unifrac_year1_sum$value)
+mean(df_unifrac_year1_in_sum$value)
+sd(df_unifrac_year1_in_sum$value)
 
-mean(df_unifrac_year2_sum$value)
-sd(df_unifrac_year2_sum$value)
+mean(df_unifrac_year2_in_sum$value)
+sd(df_unifrac_year2_in_sum$value)
 
-# B
+mean(df_unifrac_year1_ex_sum$value)
+sd(df_unifrac_year1_ex_sum$value)
+
+mean(df_unifrac_year2_ex_sum$value)
+sd(df_unifrac_year2_ex_sum$value)
+
+# B mycobiome
+#separate out years to get average beta-diversity 
+physeq_year1_in <- subset_samples(physeq_in_euk, Year == '1')
+physeq_year2_in <- subset_samples(physeq_in_euk, Year == '2')
+physeq_year1_ex <- subset_samples(physeq_ex_euk, Year == '1')
+physeq_year2_ex <- subset_samples(physeq_ex_euk, Year == '2')
+
+#calculate unifrac distances 
+dis_unifrac_year1_in <- UniFrac(physeq_year1_in, weighted=FALSE, 
+                                normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_year1_in  <- melt(as.matrix(dis_unifrac_year1_in))
+
+dis_unifrac_year2_in <- UniFrac(physeq_year2_in, weighted=FALSE, 
+                                normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_year2_in  <- melt(as.matrix(dis_unifrac_year2_in))
+
+dis_unifrac_year1_ex <- UniFrac(physeq_year1_ex, weighted=FALSE, 
+                                normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_year1_ex  <- melt(as.matrix(dis_unifrac_year1_ex))
+
+dis_unifrac_year2_ex <- UniFrac(physeq_year2_ex, weighted=FALSE, 
+                                normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_year2_ex  <- melt(as.matrix(dis_unifrac_year2_ex))
+
+#find the average for each sample
+df_unifrac_year1_in <- df_unifrac_year1_in[,-1]
+df_unifrac_year1_in_sum <- df_unifrac_year1_in %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_year2_in <- df_unifrac_year2_in[,-1]
+df_unifrac_year2_in_sum <- df_unifrac_year2_in %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_year1_ex <- df_unifrac_year1_ex[,-1]
+df_unifrac_year1_ex_sum <- df_unifrac_year1_ex %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_year2_ex <- df_unifrac_year2_ex[,-1]
+df_unifrac_year2_ex_sum <- df_unifrac_year2_ex %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+#summarize beta-div. 
+mean(df_unifrac_year1_in_sum$value)
+sd(df_unifrac_year1_in_sum$value)
+
+mean(df_unifrac_year2_in_sum$value)
+sd(df_unifrac_year2_in_sum$value)
+
+mean(df_unifrac_year1_ex_sum$value)
+sd(df_unifrac_year1_ex_sum$value)
+
+mean(df_unifrac_year2_ex_sum$value)
+sd(df_unifrac_year2_ex_sum$value)
+
+#C microbiome
 beta_diversity_calc_year <- function(physeq) {
   GPdist=phyloseq::distance(physeq, "unifrac")
   sampledf <- data.frame(sample_data(physeq))
@@ -1121,18 +1409,62 @@ beta_dispersion_calc_year <- function(physeq) {
   print(return(permutest(beta)))
 }
 
-beta_diversity_calc_year(physeq_npn)
-beta_dispersion_calc_year(physeq_npn)
+beta_diversity_calc_year(physeq_in)
+beta_dispersion_calc_year(physeq_in)
 
+beta_diversity_calc_year(physeq_ex)
+beta_dispersion_calc_year(physeq_ex)
 
+#D mycobiome
+beta_diversity_calc_year(physeq_in_euk)
+beta_dispersion_calc_year(physeq_in_euk)
 
-# Table S7 ----------------------------------------------------------------
+beta_diversity_calc_year(physeq_ex_euk)
+beta_dispersion_calc_year(physeq_ex_euk)
+
+# Table S10 ----------------------------------------------------------------
+### bacteria
+# add metadata into correct format for ANCOM function
+metadata_ancom <- metadata
+colnames(metadata_ancom)[1] <- 'Sample.ID'
+
+#create function to pull OTU table for ANCOM analysis, and put it into usable format
+otu_ancom_make <- function(physeq) {
+  otu_ancom <- data.frame(otu_table(physeq))
+  otu_ancom <- data.frame(t(otu_ancom))
+  Sample.ID <- rownames(otu_ancom)
+  rownames(otu_ancom) <- NULL
+  otu_ancom <- cbind(Sample.ID, otu_ancom)
+  return(otu_ancom)
+}
 
 #blank list to collect results from ANCOM function in
 ancom_results_year <- list()
 
-#run ANCOM to find differentially abundant taxa amoung year
-otu_ancom <- otu_ancom_make(physeq_npn)
+#run ANCOM to find differentially abundant taxa among year
+otu_ancom <- otu_ancom_make(physeq_in)
+comparison_test <- ANCOM.main(OTUdat = otu_ancom,
+                              Vardat = metadata_ancom,
+                              adjusted = FALSE,
+                              repeated = F,
+                              main.var = "Year",
+                              adj.formula = NULL,
+                              repeat.var=NULL,
+                              longitudinal=FALSE,
+                              random.formula=NULL,
+                              multcorr=2,
+                              sig=0.05,
+                              prev.cut=0.90)
+w_values <- data.frame(comparison_test$W.taxa)
+w_values$otu.names <- gsub('X', '', w_values$otu.names)
+tax <- data.frame(tax_table(physeq_npn))
+tax <- tax %>% select(Kingdom, Phylum, Order, Class, Family, Genus)
+tax$otu.names <- rownames(tax)
+ancom_sign_taxa <- merge(w_values, tax, by='otu.names')
+ancom_sign_taxa <- ancom_sign_taxa[,-1]
+ancom_results_year[[1]] <- ancom_sign_taxa
+
+otu_ancom <- otu_ancom_make(physeq_ex)
 comparison_test <- ANCOM.main(OTUdat = otu_ancom,
                               Vardat = metadata_ancom,
                               adjusted = FALSE,
@@ -1155,323 +1487,80 @@ ancom_sign_taxa <- ancom_sign_taxa[,-1]
 ancom_results_year[[1]] <- ancom_sign_taxa
 
 
-# Table S8 ----------------------------------------------------------------
-
-#random forest classification of pig
-#using OOB error rate and 1000 decision trees
-random_foresting_year <- function(data_phy) {
-  fd = data_phy
-  predictors=t(otu_table(fd))
-  dim(predictors)
-  resp <- as.factor(sample_data(fd)$Year)
-  rf.data <- data.frame(resp, predictors)
-  Forest <- randomForest(resp~., data=rf.data, ntree=1000)
-  return(Forest)
-}
-
-m1 <- random_foresting_year(physeq_npn)
-plot(m1)
-m1
-
-# Table S9 ----------------------------------------------------------------
-
-##alpha-diversity among seasons (spring, summer, fall, winter)
-# A) Mean and standard deviation of alpha diversity metrics
-# B) Kruskal-Wallis test among alpha diversity metrics
-# C) Pair-wise posthoc Nemenyi test
-
-# A
-#organize data
-erich <- estimate_richness(physeq_npn, measures = c("Observed", 'Chao1', "Shannon"))
-erich <- add_rownames(erich, "SampleID")
-#calculate summary stats
-erich_sums <- merge(erich, metadata)
-erich_sums %>% group_by(Season) %>% summarise_at(c('Observed', 'Chao1', "Shannon"), funs(mean, sd))
-
-# B and C
-
-# get data organized and formatted for stats testing
-erich <- erich %>%
-  gather(Index, Observation, c("Observed", 'Chao1', "Shannon"), na.rm = TRUE)
-rich = merge(erich, metadata)
-
-prepare_samples_kw <- function(rich) {
-  return(list(rich_obs <- rich %>% filter(Index == 'Observed'),
-              rich_cha <- rich %>% filter(Index == 'Chao1'),
-              rich_sha <- rich %>% filter(Index == 'Shannon')))
-}
-
-#list containing different metrics 
-kw_values <- prepare_samples_kw(rich)
-
-# KW and post-hoc Nemenyi 
-for(i in 1:length(kw_values)) {
-  print(kruskal.test(Observation ~ Season, data = kw_values[[i]]))
-  out <- posthoc.kruskal.nemenyi.test(x=kw_values[[i]]$Observation, g=kw_values[[i]]$Season, dist='Tukey', p.adjust.method = 'bonf' )
-  print(out$p.value)
-}
-
-# Table S10 ---------------------------------------------------------------
-
-##beta-diversity among seasons
-# A) summary stats
-# B) PERMANOVA results for comparing beta-diversity and beta-dispersion for 999 permuations. 
-# C) Pair-wise PERMANOVA results for comparing beta-diversity and beta-dispersion for 999 permuations. 
-
-# A
-#separate out seasons to get average beta-diversity 
-physeq_fall <- subset_samples(physeq_npn, Season == 'Fall')
-physeq_spri <- subset_samples(physeq_npn, Season == 'Spring')
-physeq_summ <- subset_samples(physeq_npn, Season == 'Summer')
-physeq_wint <- subset_samples(physeq_npn, Season == 'Winter')
-
-#calculate unifrac distances 
-dis_unifrac_fall <- UniFrac(physeq_fall, weighted=FALSE, 
-                             normalized=TRUE, parallel=FALSE, fast=TRUE)
-df_unifrac_fall  <- melt(as.matrix(dis_unifrac_fall))
-
-dis_unifrac_spri <- UniFrac(physeq_spri, weighted=FALSE, 
-                            normalized=TRUE, parallel=FALSE, fast=TRUE)
-df_unifrac_spri  <- melt(as.matrix(dis_unifrac_spri))
-
-dis_unifrac_summ <- UniFrac(physeq_summ, weighted=FALSE, 
-                            normalized=TRUE, parallel=FALSE, fast=TRUE)
-df_unifrac_summ  <- melt(as.matrix(dis_unifrac_summ))
-
-dis_unifrac_wint <- UniFrac(physeq_wint, weighted=FALSE, 
-                            normalized=TRUE, parallel=FALSE, fast=TRUE)
-df_unifrac_wint  <- melt(as.matrix(dis_unifrac_wint))
-
-#find the average for each sample
-df_unifrac_fall <- df_unifrac_fall[,-1]
-df_unifrac_fall_sum <- df_unifrac_fall %>% group_by(Var2) %>% 
-  summarize_at(c('value'), funs(mean))
-
-df_unifrac_spri <- df_unifrac_spri[,-1]
-df_unifrac_spri_sum <- df_unifrac_spri %>% group_by(Var2) %>% 
-  summarize_at(c('value'), funs(mean))
-
-df_unifrac_summ <- df_unifrac_summ[,-1]
-df_unifrac_summ_sum <- df_unifrac_summ %>% group_by(Var2) %>% 
-  summarize_at(c('value'), funs(mean))
-
-df_unifrac_wint <- df_unifrac_wint[,-1]
-df_unifrac_wint_sum <- df_unifrac_wint %>% group_by(Var2) %>% 
-  summarize_at(c('value'), funs(mean))
-
-#summarize beta-div. 
-mean(df_unifrac_fall_sum$value)
-sd(df_unifrac_fall_sum$value)
-
-mean(df_unifrac_spri_sum$value)
-sd(df_unifrac_spri_sum$value)
-
-mean(df_unifrac_summ_sum$value)
-sd(df_unifrac_summ_sum$value)
-
-mean(df_unifrac_wint_sum$value)
-sd(df_unifrac_wint_sum$value)
-
-# B
-beta_diversity_calc_season <- function(physeq) {
-  GPdist=phyloseq::distance(physeq, "unifrac")
-  sampledf <- data.frame(sample_data(physeq))
-  print(return(adonis(GPdist ~ Season, data = sampledf)))
-}
-
-beta_dispersion_calc_season <- function(physeq) {
-  GPdist=phyloseq::distance(physeq, "unifrac")
-  sampledf <- data.frame(sample_data(physeq))
-  beta <- betadisper(GPdist, sampledf$Season)
-  print(return(permutest(beta)))
-}
-
-beta_diversity_calc_season(physeq_npn)
-beta_dispersion_calc_season(physeq_npn)
-
-# C
-season_pairwise <- function(physeq) {
-  physeq_F <- subset_samples(physeq, Season == 'Fall')
-  physeq_W <- subset_samples(physeq, Season == 'Winter')
-  physeq_Sp <- subset_samples(physeq, Season == 'Spring')
-  physeq_Su <- subset_samples(physeq, Season == 'Summer')
-  return(list(physeq_FW <- merge_phyloseq(physeq_F, physeq_W),
-              physeq_FSp <- merge_phyloseq(physeq_F, physeq_Sp),
-              physeq_FSu <- merge_phyloseq(physeq_F, physeq_Su),
-              physeq_WSp <- merge_phyloseq(physeq_W, physeq_Sp),
-              physeq_WSu <- merge_phyloseq(physeq_W, physeq_Su),
-              physeq_SpSu <- merge_phyloseq(physeq_Sp, physeq_Su)))
-}
-
-season_list <- season_pairwise(physeq_npn)
-
-for(i in 1:length(season_list)) {
-  print(beta_diversity_calc_season(season_list[[i]]))
-}
-
-
-
-# Table S11 ---------------------------------------------------------------
-#create function to pull OTU table for ANCOM analysis, and put it into usable format
-# for function
-otu_ancom_make <- function(physeq) {
-  otu_ancom <- data.frame(otu_table(physeq))
-  otu_ancom <- data.frame(t(otu_ancom))
-  Sample.ID <- rownames(otu_ancom)
-  rownames(otu_ancom) <- NULL
-  otu_ancom <- cbind(Sample.ID, otu_ancom)
-  return(otu_ancom)
-}
-
-otu_ancom <- otu_ancom_make(physeq_npn)
-
+### Eukaryotes
 # add metadata into correct format for ANCOM function
-metadata_ancom <- metadata
-colnames(metadata_ancom)[1] <- 'Sample.ID'
+metadata_ancom_euk <- metadata_euk
+colnames(metadata_ancom_euk)[1] <- 'Sample.ID'
 
 #blank list to collect results from ANCOM function in
-ancom_results_season <- list()
+ancom_results_year <- list()
 
-for(i in 1:length(season_list)) {
-  otu_ancom <- otu_ancom_make(season_list[[i]])
-  comparison_test <- ANCOM.main(OTUdat = otu_ancom,
-                                Vardat = metadata_ancom,
-                                adjusted = FALSE,
-                                repeated = F,
-                                main.var = "Season",
-                                adj.formula = NULL,
-                                repeat.var=NULL,
-                                longitudinal=FALSE,
-                                random.formula=NULL,
-                                multcorr=2,
-                                sig=0.05,
-                                prev.cut=0.90)
-  w_values <- data.frame(comparison_test$W.taxa)
-  w_values$otu.names <- gsub('X', '', w_values$otu.names)
-  tax <- data.frame(tax_table(physeq))
-  tax <- tax %>% select(Kingdom, Phylum, Order, Class, Family, Genus)
-  tax$otu.names <- rownames(tax)
-  ancom_sign_taxa <- merge(w_values, tax, by='otu.names')
-  ancom_sign_taxa <- ancom_sign_taxa[,-1]
-  ancom_results_season[[i]] <- ancom_sign_taxa
-}
+#run ANCOM to find differentially abundant taxa among year
+otu_ancom <- otu_ancom_make(physeq_in_euk)
+comparison_test <- ANCOM.main(OTUdat = otu_ancom,
+                              Vardat = metadata_ancom_euk,
+                              adjusted = FALSE,
+                              repeated = F,
+                              main.var = "Year",
+                              adj.formula = NULL,
+                              repeat.var=NULL,
+                              longitudinal=FALSE,
+                              random.formula=NULL,
+                              multcorr=2,
+                              sig=0.05,
+                              prev.cut=0.90)
+w_values <- data.frame(comparison_test$W.taxa)
+w_values$otu.names <- gsub('X', '', w_values$otu.names)
+tax <- data.frame(tax_table(physeq_npn_euk))
+tax <- tax %>% select(Kingdom, Phylum, Order, Class, Family, Genus)
+tax$otu.names <- rownames(tax)
+ancom_sign_taxa <- merge(w_values, tax, by='otu.names')
+ancom_sign_taxa <- ancom_sign_taxa[,-1]
+ancom_results_year[[1]] <- ancom_sign_taxa
 
+#blank list to collect results from ANCOM function in
+ancom_results_year <- list()
 
-# Table S12 ---------------------------------------------------------------
+#run ANCOM to find differentially abundant taxa among year
+otu_ancom <- otu_ancom_make(physeq_ex_euk)
+comparison_test <- ANCOM.main(OTUdat = otu_ancom,
+                              Vardat = metadata_ancom_euk,
+                              adjusted = FALSE,
+                              repeated = F,
+                              main.var = "Year",
+                              adj.formula = NULL,
+                              repeat.var=NULL,
+                              longitudinal=FALSE,
+                              random.formula=NULL,
+                              multcorr=2,
+                              sig=0.05,
+                              prev.cut=0.90)
+w_values <- data.frame(comparison_test$W.taxa)
+w_values$otu.names <- gsub('X', '', w_values$otu.names)
+tax <- data.frame(tax_table(physeq_npn_euk))
+tax <- tax %>% select(Kingdom, Phylum, Order, Class, Family, Genus)
+tax$otu.names <- rownames(tax)
+ancom_sign_taxa <- merge(w_values, tax, by='otu.names')
+ancom_sign_taxa <- ancom_sign_taxa[,-1]
+ancom_results_year[[1]] <- ancom_sign_taxa
 
-#random forest classification of season
-#using OOB error rate and 1000 decision trees
-random_foresting_season <- function(data_phy) {
-  fd = data_phy
-  predictors=t(otu_table(fd))
-  dim(predictors)
-  resp <- as.factor(sample_data(fd)$Season)
-  rf.data <- data.frame(resp, predictors)
-  Forest <- randomForest(resp~., data=rf.data, ntree=2000)
-  return(Forest)
-}
+# Table S11 ---------------------------------------------------------------
 
-m1 <- random_foresting_season(physeq_npn)
-plot(m1)
+#microbiomes
+##alpha-diversity among years
+# A) Mean and standard deviation 
+# C) Kruskal-Wallis test
 
-m1
-
-
-# Table S13 ---------------------------------------------------------------
-#A) alpha-diversity interaction among years and seasons
-
-erich <- estimate_richness(physeq_npn, measures = c("Observed", 'Chao1', "Shannon"))
-erich <- add_rownames(erich, "SampleID")
-
-# get data organized and formatted for stats testing
-erich <- erich %>%
-  gather(Index, Observation, c("Observed", 'Chao1', "Shannon"), na.rm = TRUE)
-rich = merge(erich, metadata)
-
-prepare_samples_kw <- function(rich) {
-  return(list(rich_obs <- rich %>% filter(Index == 'Observed'),
-              rich_cha <- rich %>% filter(Index == 'Chao1'),
-              rich_sha <- rich %>% filter(Index == 'Shannon')))
-}
-
-kw_values <- prepare_samples_kw(rich)
-
-# ANOVA, including interaction effect
-model = lm(Observation ~ Season:Year,
-           data = kw_values[[1]])
-Anova(model,
-      type = "II")
-
-model = lm(Observation ~ Season:Year,
-           data = kw_values[[2]])
-Anova(model,
-      type = "II")
-
-model = lm(Observation ~ Season:Year,
-           data = kw_values[[3]])
-Anova(model,
-      type = "II")
-
-
-#B) beta-diversity interaction effect among years and seasons 
-beta_diversity_calc_int <- function(physeq) {
-  GPdist=phyloseq::distance(physeq, "unifrac")
-  sampledf <- data.frame(sample_data(physeq))
-  print(return(adonis(GPdist ~ Season * Year, data = sampledf)))
-}
-
-beta_diversity_calc_int(physeq_npn)
-
-
-# Table S14 ---------------------------------------------------------------
-
-#
-
-# Table S15 ---------------------------------------------------------------
-
-
-# Table S16 ---------------------------------------------------------------
-
-
-
-# Table S17 ---------------------------------------------------------------
-#random forest classification of microbiome type (external, internal)
-#using OOB error rate and 2000 decision trees
-random_foresting_inex <- function(data_phy) {
-  fd = data_phy
-  predictors=t(otu_table(fd))
-  dim(predictors)
-  resp <- as.factor(sample_data(fd)$sample_type)
-  rf.data <- data.frame(resp, predictors)
-  Forest <- randomForest(resp~., data=rf.data, ntree=2000)
-  return(Forest)
-}
-
-m1 <- random_foresting_inex(physeq_npn)
-plot(m1)
-
-m1
-
-
-# Table S18 ---------------------------------------------------------------
-
-
-
-# Table S19 ---------------------------------------------------------------
-
-
-
-# Table S20 ---------------------------------------------------------------
-
-#alpha diversity over time (date collected)
 # A
-erich <- estimate_richness(physeq_npn, measures = c("Observed", 'Chao1', "Shannon"))
+#internal
+#calculate diversity metrics
+erich <- estimate_richness(physeq_in, measures = c("Observed", 'Chao1', "Shannon"))
 erich <- add_rownames(erich, "SampleID")
+#summary stats
 erich_sums <- merge(erich, metadata)
 erich_sums %>% group_by(date_collected) %>% summarise_at(c('Observed', 'Chao1', "Shannon"), funs(mean, sd))
 
-# B and C
-
+# B
 # get data organized and formatted for stats testing
 erich <- erich %>%
   gather(Index, Observation, c("Observed", 'Chao1', "Shannon"), na.rm = TRUE)
@@ -1482,10 +1571,10 @@ prepare_samples_kw <- function(rich) {
               rich_cha <- rich %>% filter(Index == 'Chao1'),
               rich_sha <- rich %>% filter(Index == 'Shannon')))
 }
-
+#list to hold results
 kw_values <- prepare_samples_kw(rich)
 
-# KW and post-hoc Nemenyi 
+# KW
 for(i in 1:length(kw_values)) {
   print(kruskal.test(Observation ~ date_collected, data = kw_values[[i]]))
   out <- posthoc.kruskal.nemenyi.test(x=kw_values[[i]]$Observation, g=kw_values[[i]]$date_collected, 
@@ -1493,25 +1582,124 @@ for(i in 1:length(kw_values)) {
   print(out$p.value)
 }
 
-# Table S21 ---------------------------------------------------------------
-##beta-diversity over time (date collected)
-# A) summary stats
-# B) PERMANOVA results for comparing beta-diversity and beta-dispersion for 999 permuations. 
-# C) Pairwise PERMANOVA results for comparing beta-diversity 
-# A
+# external
+#calculate diversity metrics
+erich <- estimate_richness(physeq_ex, measures = c("Observed", 'Chao1', "Shannon"))
+erich <- add_rownames(erich, "SampleID")
+#summary stats
+erich_sums <- merge(erich, metadata)
+erich_sums %>% group_by(date_collected) %>% summarise_at(c('Observed', 'Chao1', "Shannon"), funs(mean, sd))
 
+# B
+# get data organized and formatted for stats testing
+erich <- erich %>%
+  gather(Index, Observation, c("Observed", 'Chao1', "Shannon"), na.rm = TRUE)
+rich = merge(erich, metadata)
+
+prepare_samples_kw <- function(rich) {
+  return(list(rich_obs <- rich %>% filter(Index == 'Observed'),
+              rich_cha <- rich %>% filter(Index == 'Chao1'),
+              rich_sha <- rich %>% filter(Index == 'Shannon')))
+}
+#list to hold results
+kw_values <- prepare_samples_kw(rich)
+
+# KW
+for(i in 1:length(kw_values)) {
+  print(kruskal.test(Observation ~ date_collected, data = kw_values[[i]]))
+  out <- posthoc.kruskal.nemenyi.test(x=kw_values[[i]]$Observation, g=kw_values[[i]]$date_collected, 
+                                      dist='Tukey', p.adjust.method = 'bonf' )
+  print(out$p.value)
+}
+
+#mycobiomes
+##alpha-diversity among years
+# A) Mean and standard deviation 
+# C) Kruskal-Wallis test
+
+# A
+#internal
+#calculate diversity metrics
+erich <- estimate_richness(physeq_in_euk, measures = c("Observed", 'Chao1', "Shannon"))
+erich <- add_rownames(erich, "SampleID")
+#summary stats
+erich_sums <- merge(erich, metadata_euk)
+erich_sums %>% group_by(date_collected) %>% summarise_at(c('Observed', 'Chao1', "Shannon"), funs(mean, sd))
+
+# B
+# get data organized and formatted for stats testing
+erich <- erich %>%
+  gather(Index, Observation, c("Observed", 'Chao1', "Shannon"), na.rm = TRUE)
+rich = merge(erich, metadata_euk)
+
+prepare_samples_kw <- function(rich) {
+  return(list(rich_obs <- rich %>% filter(Index == 'Observed'),
+              rich_cha <- rich %>% filter(Index == 'Chao1'),
+              rich_sha <- rich %>% filter(Index == 'Shannon')))
+}
+#list to hold results
+kw_values <- prepare_samples_kw(rich)
+
+# KW
+for(i in 1:length(kw_values)) {
+  print(kruskal.test(Observation ~ date_collected, data = kw_values[[i]]))
+  out <- posthoc.kruskal.nemenyi.test(x=kw_values[[i]]$Observation, g=kw_values[[i]]$date_collected, 
+                                      dist='Tukey', p.adjust.method = 'bonf' )
+  print(out$p.value)
+}
+
+# external
+#calculate diversity metrics
+erich <- estimate_richness(physeq_ex_euk, measures = c("Observed", 'Chao1', "Shannon"))
+erich <- add_rownames(erich, "SampleID")
+#summary stats
+erich_sums <- merge(erich, metadata_euk)
+erich_sums %>% group_by(date_collected) %>% summarise_at(c('Observed', 'Chao1', "Shannon"), funs(mean, sd))
+
+# B
+# get data organized and formatted for stats testing
+erich <- erich %>%
+  gather(Index, Observation, c("Observed", 'Chao1', "Shannon"), na.rm = TRUE)
+rich = merge(erich, metadata_euk)
+
+prepare_samples_kw <- function(rich) {
+  return(list(rich_obs <- rich %>% filter(Index == 'Observed'),
+              rich_cha <- rich %>% filter(Index == 'Chao1'),
+              rich_sha <- rich %>% filter(Index == 'Shannon')))
+}
+#list to hold results
+kw_values <- prepare_samples_kw(rich)
+
+# KW
+for(i in 1:length(kw_values)) {
+  print(kruskal.test(Observation ~ date_collected, data = kw_values[[i]]))
+  out <- posthoc.kruskal.nemenyi.test(x=kw_values[[i]]$Observation, g=kw_values[[i]]$date_collected, 
+                                      dist='Tukey', p.adjust.method = 'bonf' )
+  print(out$p.value)
+}
+
+
+# Table S12 ---------------------------------------------------------------
+
+##beta-diversity over time (date collected)
+# A & B) summary stats
+# C & D) PERMANOVA results for comparing beta-diversity and beta-dispersion for 999 permuations. 
+# E & F) Pairwise PERMANOVA results for comparing beta-diversity 
+
+#A
+#internal
 #separate out physeq objects
-physeq_time1 <- subset_samples(physeq_npn, date_collected == '8/20/2018')
-physeq_time2 <- subset_samples(physeq_npn, date_collected == '10/25/2018')
-physeq_time3 <- subset_samples(physeq_npn, date_collected == '1/22/2019')
-physeq_time4 <- subset_samples(physeq_npn, date_collected == '4/23/2019')
-physeq_time5 <- subset_samples(physeq_npn, date_collected == '7/26/2019')
-physeq_time6 <- subset_samples(physeq_npn, date_collected == '10/26/2019')
-physeq_time7 <- subset_samples(physeq_npn, date_collected == '1/24/2020')
+physeq_time1 <- subset_samples(physeq_in, date_collected == '8/20/2018')
+physeq_time2 <- subset_samples(physeq_in, date_collected == '10/25/2018')
+physeq_time3 <- subset_samples(physeq_in, date_collected == '1/22/2019')
+physeq_time4 <- subset_samples(physeq_in, date_collected == '4/23/2019')
+physeq_time5 <- subset_samples(physeq_in, date_collected == '7/26/2019')
+physeq_time6 <- subset_samples(physeq_in, date_collected == '10/26/2019')
+physeq_time7 <- subset_samples(physeq_in, date_collected == '1/24/2020')
 
 #calculate unifrac distances 
 dis_unifrac_1 <- UniFrac(physeq_time1, weighted=FALSE, 
-                          normalized=TRUE, parallel=FALSE, fast=TRUE)
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
 df_unifrac_1  <- melt(as.matrix(dis_unifrac_1))
 
 dis_unifrac_2 <- UniFrac(physeq_time2, weighted=FALSE, 
@@ -1537,8 +1725,6 @@ df_unifrac_6  <- melt(as.matrix(dis_unifrac_6))
 dis_unifrac_7 <- UniFrac(physeq_time7, weighted=FALSE, 
                          normalized=TRUE, parallel=FALSE, fast=TRUE)
 df_unifrac_7  <- melt(as.matrix(dis_unifrac_7))
-
-
 
 #find the average for each sample
 df_unifrac_1 <- df_unifrac_1[,-1]
@@ -1592,7 +1778,8 @@ sd(df_unifrac_6_sum$value)
 mean(df_unifrac_7_sum$value)
 sd(df_unifrac_7_sum$value)
 
-# B 
+# C 
+# internal
 beta_diversity_calc_time <- function(physeq) {
   GPdist=phyloseq::distance(physeq, "unifrac")
   sampledf <- data.frame(sample_data(physeq))
@@ -1606,10 +1793,301 @@ beta_dispersion_calc_time <- function(physeq) {
   print(return(permutest(beta)))
 }
 
-beta_diversity_calc_time(physeq_npn)
-beta_dispersion_calc_time(physeq_npn)
+beta_diversity_calc_time(physeq_in)
+beta_dispersion_calc_time(physeq_in)
+
+#A 
+#external
+#separate out physeq objects
+physeq_time1 <- subset_samples(physeq_ex, date_collected == '8/20/2018')
+physeq_time2 <- subset_samples(physeq_ex, date_collected == '10/25/2018')
+physeq_time3 <- subset_samples(physeq_ex, date_collected == '1/22/2019')
+physeq_time4 <- subset_samples(physeq_ex, date_collected == '4/23/2019')
+physeq_time5 <- subset_samples(physeq_ex, date_collected == '7/26/2019')
+physeq_time6 <- subset_samples(physeq_ex, date_collected == '10/26/2019')
+physeq_time7 <- subset_samples(physeq_ex, date_collected == '1/24/2020')
+
+#calculate unifrac distances 
+dis_unifrac_1 <- UniFrac(physeq_time1, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_1  <- melt(as.matrix(dis_unifrac_1))
+
+dis_unifrac_2 <- UniFrac(physeq_time2, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_2  <- melt(as.matrix(dis_unifrac_2))
+
+dis_unifrac_3 <- UniFrac(physeq_time3, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_3  <- melt(as.matrix(dis_unifrac_3))
+
+dis_unifrac_4 <- UniFrac(physeq_time4, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_4  <- melt(as.matrix(dis_unifrac_4))
+
+dis_unifrac_5 <- UniFrac(physeq_time5, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_5  <- melt(as.matrix(dis_unifrac_5))
+
+dis_unifrac_6 <- UniFrac(physeq_time6, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_6  <- melt(as.matrix(dis_unifrac_6))
+
+dis_unifrac_7 <- UniFrac(physeq_time7, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_7  <- melt(as.matrix(dis_unifrac_7))
+
+#find the average for each sample
+df_unifrac_1 <- df_unifrac_1[,-1]
+df_unifrac_1_sum <- df_unifrac_1 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_2 <- df_unifrac_2[,-1]
+df_unifrac_2_sum <- df_unifrac_2 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_3 <- df_unifrac_3[,-1]
+df_unifrac_3_sum <- df_unifrac_3 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_4 <- df_unifrac_4[,-1]
+df_unifrac_4_sum <- df_unifrac_4 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_5 <- df_unifrac_5[,-1]
+df_unifrac_5_sum <- df_unifrac_5 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_6 <- df_unifrac_6[,-1]
+df_unifrac_6_sum <- df_unifrac_6 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_7 <- df_unifrac_7[,-1]
+df_unifrac_7_sum <- df_unifrac_7 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+
+#summarize beta-div. 
+mean(df_unifrac_1_sum$value)
+sd(df_unifrac_1_sum$value)
+
+mean(df_unifrac_2_sum$value)
+sd(df_unifrac_2_sum$value)
+
+mean(df_unifrac_3_sum$value)
+sd(df_unifrac_3_sum$value)
+
+mean(df_unifrac_4_sum$value)
+sd(df_unifrac_4_sum$value)
+
+mean(df_unifrac_5_sum$value)
+sd(df_unifrac_5_sum$value)
+
+mean(df_unifrac_6_sum$value)
+sd(df_unifrac_6_sum$value)
+
+mean(df_unifrac_7_sum$value)
+sd(df_unifrac_7_sum$value)
+
+# C
+#external
+beta_diversity_calc_time(physeq_ex)
+beta_dispersion_calc_time(physeq_ex)
 
 # B
+#Internal
+#separate out physeq objects
+physeq_time1 <- subset_samples(physeq_in_euk, date_collected == '8/20/2018')
+physeq_time2 <- subset_samples(physeq_in_euk, date_collected == '10/25/2018')
+physeq_time3 <- subset_samples(physeq_in_euk, date_collected == '1/22/2019')
+physeq_time4 <- subset_samples(physeq_in_euk, date_collected == '4/23/2019')
+physeq_time5 <- subset_samples(physeq_in_euk, date_collected == '7/26/2019')
+physeq_time6 <- subset_samples(physeq_in_euk, date_collected == '10/26/2019')
+physeq_time7 <- subset_samples(physeq_in_euk, date_collected == '1/24/2020')
+
+#calculate unifrac distances 
+dis_unifrac_1 <- UniFrac(physeq_time1, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_1  <- melt(as.matrix(dis_unifrac_1))
+
+dis_unifrac_2 <- UniFrac(physeq_time2, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_2  <- melt(as.matrix(dis_unifrac_2))
+
+dis_unifrac_3 <- UniFrac(physeq_time3, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_3  <- melt(as.matrix(dis_unifrac_3))
+
+dis_unifrac_4 <- UniFrac(physeq_time4, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_4  <- melt(as.matrix(dis_unifrac_4))
+
+dis_unifrac_5 <- UniFrac(physeq_time5, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_5  <- melt(as.matrix(dis_unifrac_5))
+
+dis_unifrac_6 <- UniFrac(physeq_time6, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_6  <- melt(as.matrix(dis_unifrac_6))
+
+dis_unifrac_7 <- UniFrac(physeq_time7, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_7  <- melt(as.matrix(dis_unifrac_7))
+
+#find the average for each sample
+df_unifrac_1 <- df_unifrac_1[,-1]
+df_unifrac_1_sum <- df_unifrac_1 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_2 <- df_unifrac_2[,-1]
+df_unifrac_2_sum <- df_unifrac_2 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_3 <- df_unifrac_3[,-1]
+df_unifrac_3_sum <- df_unifrac_3 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_4 <- df_unifrac_4[,-1]
+df_unifrac_4_sum <- df_unifrac_4 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_5 <- df_unifrac_5[,-1]
+df_unifrac_5_sum <- df_unifrac_5 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_6 <- df_unifrac_6[,-1]
+df_unifrac_6_sum <- df_unifrac_6 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_7 <- df_unifrac_7[,-1]
+df_unifrac_7_sum <- df_unifrac_7 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+
+#summarize beta-div. 
+mean(df_unifrac_1_sum$value)
+sd(df_unifrac_1_sum$value)
+
+mean(df_unifrac_2_sum$value)
+sd(df_unifrac_2_sum$value)
+
+mean(df_unifrac_3_sum$value)
+sd(df_unifrac_3_sum$value)
+
+mean(df_unifrac_4_sum$value)
+sd(df_unifrac_4_sum$value)
+
+mean(df_unifrac_5_sum$value)
+sd(df_unifrac_5_sum$value)
+
+mean(df_unifrac_6_sum$value)
+sd(df_unifrac_6_sum$value)
+
+mean(df_unifrac_7_sum$value)
+sd(df_unifrac_7_sum$value)
+
+# D
+#internal
+beta_diversity_calc_time(physeq_in_euk)
+beta_dispersion_calc_time(physeq_in_euk)
+
+# B
+#External
+#separate out physeq objects
+physeq_time1 <- subset_samples(physeq_ex_euk, date_collected == '8/20/2018')
+physeq_time2 <- subset_samples(physeq_ex_euk, date_collected == '10/25/2018')
+physeq_time3 <- subset_samples(physeq_ex_euk, date_collected == '1/22/2019')
+physeq_time4 <- subset_samples(physeq_ex_euk, date_collected == '4/23/2019')
+physeq_time5 <- subset_samples(physeq_ex_euk, date_collected == '7/26/2019')
+physeq_time6 <- subset_samples(physeq_ex_euk, date_collected == '10/26/2019')
+physeq_time7 <- subset_samples(physeq_ex_euk, date_collected == '1/24/2020')
+
+#calculate unifrac distances 
+dis_unifrac_1 <- UniFrac(physeq_time1, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_1  <- melt(as.matrix(dis_unifrac_1))
+
+dis_unifrac_2 <- UniFrac(physeq_time2, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_2  <- melt(as.matrix(dis_unifrac_2))
+
+dis_unifrac_3 <- UniFrac(physeq_time3, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_3  <- melt(as.matrix(dis_unifrac_3))
+
+dis_unifrac_4 <- UniFrac(physeq_time4, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_4  <- melt(as.matrix(dis_unifrac_4))
+
+dis_unifrac_5 <- UniFrac(physeq_time5, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_5  <- melt(as.matrix(dis_unifrac_5))
+
+dis_unifrac_6 <- UniFrac(physeq_time6, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_6  <- melt(as.matrix(dis_unifrac_6))
+
+dis_unifrac_7 <- UniFrac(physeq_time7, weighted=FALSE, 
+                         normalized=TRUE, parallel=FALSE, fast=TRUE)
+df_unifrac_7  <- melt(as.matrix(dis_unifrac_7))
+
+#find the average for each sample
+df_unifrac_1 <- df_unifrac_1[,-1]
+df_unifrac_1_sum <- df_unifrac_1 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_2 <- df_unifrac_2[,-1]
+df_unifrac_2_sum <- df_unifrac_2 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_3 <- df_unifrac_3[,-1]
+df_unifrac_3_sum <- df_unifrac_3 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_4 <- df_unifrac_4[,-1]
+df_unifrac_4_sum <- df_unifrac_4 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_5 <- df_unifrac_5[,-1]
+df_unifrac_5_sum <- df_unifrac_5 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_6 <- df_unifrac_6[,-1]
+df_unifrac_6_sum <- df_unifrac_6 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+df_unifrac_7 <- df_unifrac_7[,-1]
+df_unifrac_7_sum <- df_unifrac_7 %>% group_by(Var2) %>% 
+  summarize_at(c('value'), funs(mean))
+
+
+#summarize beta-div. 
+mean(df_unifrac_1_sum$value)
+sd(df_unifrac_1_sum$value)
+
+mean(df_unifrac_2_sum$value)
+sd(df_unifrac_2_sum$value)
+
+mean(df_unifrac_3_sum$value)
+sd(df_unifrac_3_sum$value)
+
+mean(df_unifrac_4_sum$value)
+sd(df_unifrac_4_sum$value)
+
+mean(df_unifrac_5_sum$value)
+sd(df_unifrac_5_sum$value)
+
+mean(df_unifrac_6_sum$value)
+sd(df_unifrac_6_sum$value)
+
+mean(df_unifrac_7_sum$value)
+sd(df_unifrac_7_sum$value)
+
+# D
+#External
+beta_diversity_calc_time(physeq_ex_euk)
+beta_dispersion_calc_time(physeq_ex_euk)
+
+# E & F
 date_pairwise <- function(physeq) {
   physeq_1 <- subset_samples(physeq, date_collected == '8/20/2018')
   physeq_2 <- subset_samples(physeq, date_collected == '10/25/2018')
@@ -1641,14 +2119,37 @@ date_pairwise <- function(physeq) {
               physeq_67 <- merge_phyloseq(physeq_6, physeq_7)))
 }
 
-date_list <- date_pairwise(physeq_npn)
+# E
+# Internal
+date_list <- date_pairwise(physeq_in)
 
 for(i in 1:length(date_list)) {
   print(beta_diversity_calc_time(date_list[[i]]))
 }
 
+# External
+date_list <- date_pairwise(physeq_ex)
 
-# Table S22 ---------------------------------------------------------------
+for(i in 1:length(date_list)) {
+  print(beta_diversity_calc_time(date_list[[i]]))
+}
+
+# F
+# Internal
+date_list <- date_pairwise(physeq_in_euk)
+
+for(i in 1:length(date_list)) {
+  print(beta_diversity_calc_time(date_list[[i]]))
+}
+
+# External
+date_list <- date_pairwise(physeq_ex_euk)
+
+for(i in 1:length(date_list)) {
+  print(beta_diversity_calc_time(date_list[[i]]))
+}
+
+# Table S13 ---------------------------------------------------------------
 
 otu <- as.data.frame(t(otu_table(physeq_npn)))
 otu$SampleID <- rownames(otu)
@@ -1678,7 +2179,7 @@ tax <- tax %>% select(Kingdom, Phylum, Class, Order, Family, Genus)
 tax$predictors <- rownames(tax)
 imp.100 <- merge(imp.100, tax)
 
-# Table S23 ---------------------------------------------------------------
+# Table S14 ---------------------------------------------------------------
 
 otu <- as.data.frame(t(otu_table(physeq_npn)))
 otu$SampleID <- rownames(otu)
@@ -1695,3 +2196,109 @@ m1 <- randomForest(
 )
 
 m1
+
+# Table S15 ---------------------------------------------------------------
+
+## Microbiome
+# Internal
+#change this for all of the date combos
+#make sure you delete all the empty rows and columns, throws error
+meta_mic_feast <-Load_metadata(metadata_path = "aquatic_bones_lucas_grant_meta_FEAST_timeseries6_int.txt")
+
+#change number for corresponding date combination
+otu_mic_feast <- data.frame(otu_table(physeq_in))
+write.table(otu_mic_feast, 'otu_mic_feast_time1_in.txt')
+
+#move over column names by one in excel 
+otu_mic_feast <- Load_CountMatrix(CountMatrix_path = "otu_mic_feast_time1_in.txt")
+
+FEAST_output <- FEAST(C = otu_mic_feast, metadata = meta_mic_feast, 
+                      different_sources_flag = 0,
+                      dir_path = "C:/Users/sierr/Documents/Lucas_grant_project/R_scripts",
+                      outfile="micro_FEAST_time6_in")
+
+#External
+#change this for all of the date combos
+#make sure you delete all the empty rows and columns, throws error
+meta_mic_feast <-Load_metadata(metadata_path = "aquatic_bones_lucas_grant_meta_FEAST_timeseries6_ex.txt")
+
+#change number for corresponding date combination
+otu_mic_feast <- data.frame(otu_table(physeq_ex))
+write.table(otu_mic_feast, 'otu_mic_feast_time1_ex.txt')
+
+#move over column names by one in excel 
+otu_mic_feast <- Load_CountMatrix(CountMatrix_path = "otu_mic_feast_time1_ex.txt")
+
+FEAST_output <- FEAST(C = otu_mic_feast, metadata = meta_mic_feast, 
+                      different_sources_flag = 0,
+                      dir_path = "C:/Users/sierr/Documents/Lucas_grant_project/R_scripts",
+                      outfile="micro_FEAST_time6_ex")
+
+## Mycobiome
+#Internal
+#change this for all of the date combos
+#make sure you delete all the empty rows and columns, throws error
+meta_myc_feast <-Load_metadata(metadata_path = "aquatic_bones_lucas_grant_meta_FEAST_timeseries6_int_euk.txt")
+
+#change number for corresponding date combination
+otu_myc_feast <- data.frame(otu_table(physeq_in_euk))
+write.table(otu_myc_feast, 'otu_myc_feast_time1_in.txt')
+
+#move over column names by one in excel 
+otu_myc_feast <- Load_CountMatrix(CountMatrix_path = "otu_myc_feast_time1_in.txt")
+
+FEAST_output <- FEAST(C = otu_myc_feast, metadata = meta_myc_feast, 
+                      different_sources_flag = 0,
+                      dir_path = "C:/Users/sierr/Documents/Lucas_grant_project/R_scripts",
+                      outfile="myco_FEAST_time6_in")
+
+#External
+#change this for all of the date combos
+#make sure you delete all the empty rows and columns, throws error
+meta_myc_feast <-Load_metadata(metadata_path = "aquatic_bones_lucas_grant_meta_FEAST_timeseries6_ex_euk.txt")
+
+#change number for corresponding date combination
+otu_myc_feast <- data.frame(otu_table(physeq_ex_euk))
+write.table(otu_myc_feast, 'otu_myc_feast_time1_ex.txt')
+
+#move over column names by one in excel 
+otu_myc_feast <- Load_CountMatrix(CountMatrix_path = "otu_myc_feast_time1_ex.txt")
+
+FEAST_output <- FEAST(C = otu_myc_feast, metadata = meta_myc_feast, 
+                      different_sources_flag = 0,
+                      dir_path = "C:/Users/sierr/Documents/Lucas_grant_project/R_scripts",
+                      outfile="myco_FEAST_time6_ex")
+
+
+## reformatted outputs in excel
+feast_output <- read.csv('timeseries_FEAST.csv')
+
+feast_op_micro <- feast_output %>% filter(Community == 'Microbiome')
+
+feast_op_micro$Compare <- factor(feast_op_micro$Compare, levels = c('Comp1', 'Other1',
+                                                                    'Comp2', 'Other2',
+                                                                    'Comp3', 'Other3',
+                                                                    'Comp4', 'Other4',
+                                                                    'Comp5', 'Other5',
+                                                                    'Comp6', 'Other6'
+                                                                    
+))
+
+
+feast_op_micro %>% group_by(Compare) %>% summarise_at(c('Contribution'), funs(mean, sd))
+
+
+feast_op_myco <- feast_output %>% filter(Community == 'Mycobiome')
+
+feast_op_myco$Compare <- factor(feast_op_myco$Compare, levels = c('Comp1', 'Other1',
+                                                                    'Comp2', 'Other2',
+                                                                    'Comp3', 'Other3',
+                                                                    'Comp4', 'Other4',
+                                                                    'Comp5', 'Other5',
+                                                                    'Comp6', 'Other6'
+                                                                    
+))
+
+
+feast_op_myco %>% group_by(Compare) %>% summarise_at(c('Contribution'), funs(mean, sd))
+

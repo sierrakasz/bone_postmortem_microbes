@@ -146,11 +146,14 @@ physeq_ex_euk <- subset_samples(physeq_4000, sample_type == 'external_microbiome
 
 physeq_npn_euk <- merge_phyloseq(physeq_in_euk, physeq_ex_euk)
 
-# Table 2 -----------------------------------------------------------------
+## Tables 1 & 2 were made in excel
+
+# Table 3 -----------------------------------------------------------------
 
 # Random forest regression of ADH using out-of-bag (OOB) classification and 500 decision trees.
-# Variation explained, mean square residuals, and mean squre error are reported. 
+# Variation explained, mean square residuals, and mean square error are reported. 
 
+### Microbiome
 #first model - all samples OOB
 otu <- as.data.frame(t(otu_table(physeq_npn)))
 otu$SampleID <- rownames(otu)
@@ -224,12 +227,88 @@ random_forest_date <- function(physeq) {
   print(sqrt(m1$mse[which.min(m1$mse)]))
 }
 
-#model 3 - without pig 1
-physeq_nopig1 <- subset_samples(physeq_npn, pig != '1')
-random_forest_date(physeq_nopig1)
-
-#model 4 - only internal microbiome
+#model 3 - only internal microbiome
 random_forest_date(physeq_in)
 
-#model 5 - only internal microbiome
+#model 4 - only external microbiome
 random_forest_date(physeq_ex)
+
+### Mycobiome
+#first model - all samples OOB
+otu <- as.data.frame(t(otu_table(physeq_npn_euk)))
+otu$SampleID <- rownames(otu)
+meta_sa <- metadata_euk %>% select(SampleID, date_collected)
+meta_sa$date_collected <- as.numeric(meta_sa$date_collected)
+otu <- merge(meta_sa, otu, by = 'SampleID')
+otu <- otu[,-1]
+names(otu) <- make.names(names(otu))
+
+m1 <- randomForest(
+  formula = date_collected ~ .,
+  data    = otu,
+  ntree= 500
+)
+
+m1
+sqrt(m1$mse[which.min(m1$mse)])
+
+#second model - all samples test set error
+
+valid_split <- initial_split(otu, .8)
+otu_train <- analysis(valid_split)
+otu_valid <- assessment(valid_split)
+x_test <- otu_valid[setdiff(names(otu_valid), "date_collected")]
+y_test <- otu_valid$date_collected
+
+rf_oob_comp <- randomForest(
+  formula = date_collected~ .,
+  data    = otu_train,
+  xtest   = x_test,
+  ytest   = y_test,
+  ntree = 500
+)
+
+oob <- sqrt(m1$mse)
+validation <- sqrt(rf_oob_comp$mse)
+
+# compare error rates
+tibble::tibble(
+  `Out of Bag Error` = oob,
+  `Test error` = validation,
+  ntrees = 1:rf_oob_comp$ntree
+) %>%
+  gather(Metric, Error, -ntrees) %>%
+  ggplot(aes(ntrees, Error, color = Metric)) +
+  geom_line() +
+  xlab("Number of trees")
+
+rf_oob_comp
+sqrt(m1$mse[which.min(rf_oob_comp$mse)])
+
+#decided on OOB over test/train
+
+#function to run random forest
+random_forest_date <- function(physeq) {
+  otu <- as.data.frame(t(otu_table(physeq)))
+  otu$SampleID <- rownames(otu)
+  meta_sa <- metadata_euk %>% select(SampleID, date_collected)
+  meta_sa$date_collected <- as.numeric(meta_sa$date_collected)
+  otu <- merge(meta_sa, otu, by = 'SampleID')
+  otu <- otu[,-1]
+  names(otu) <- make.names(names(otu))
+  
+  m1 <- randomForest(
+    formula = date_collected ~ .,
+    data    = otu,
+    ntree= 500
+  )
+  
+  print(m1)
+  print(sqrt(m1$mse[which.min(m1$mse)]))
+}
+
+#model 3 - only internal mycobiome
+random_forest_date(physeq_in_euk)
+
+#model 4 - only external mycobiome
+random_forest_date(physeq_ex_euk)

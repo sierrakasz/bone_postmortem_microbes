@@ -751,7 +751,7 @@ for(i in 1:length(season_list)) {
 
 # Table S12 ---------------------------------------------------------------
 
-#random forest classification of pig
+#random forest classification of season
 #using OOB error rate and 1000 decision trees
 random_foresting_season <- function(data_phy) {
   fd = data_phy
@@ -1378,4 +1378,50 @@ for(i in 1:length(date_list)) {
 }
 
 
+# Table S22 ---------------------------------------------------------------
 
+otu <- as.data.frame(t(otu_table(physeq_npn)))
+otu$SampleID <- rownames(otu)
+meta_sa <- metadata %>% select(SampleID, date_collected)
+meta_sa$date_collected <- as.numeric(meta_sa$date_collected)
+otu <- merge(meta_sa, otu, by = 'SampleID')
+otu <- otu[,-1]
+names(otu) <- make.names(names(otu))
+
+m1 <- randomForest(
+  formula = date_collected ~ .,
+  data    = otu,
+  ntree= 500
+)
+
+m1
+
+#let's see what the contributing taxa are
+imp <- importance(m1)
+imp <- data.frame(predictors = rownames(imp), imp)
+imp.sort <- arrange(imp, desc(IncNodePurity))
+imp.sort$predictors <- factor(imp.sort$predictors, levels = imp.sort$predictors)
+imp.100 <- imp.sort[1:100, ]
+imp.100$predictors<- gsub('X', '', imp.100$predictors)
+tax <- data.frame(tax_table(physeq))
+tax <- tax %>% select(Kingdom, Phylum, Class, Order, Family, Genus)
+tax$predictors <- rownames(tax)
+imp.100 <- merge(imp.100, tax)
+
+# Table S23 ---------------------------------------------------------------
+
+otu <- as.data.frame(t(otu_table(physeq_npn)))
+otu$SampleID <- rownames(otu)
+meta_sa <- metadata %>% select(SampleID, adh)
+meta_sa$adh <- as.numeric(meta_sa$adh)
+otu <- merge(meta_sa, otu, by = 'SampleID')
+otu <- otu[,-1]
+names(otu) <- make.names(names(otu))
+
+m1 <- randomForest(
+  formula = adh ~ .,
+  data    = otu,
+  ntree= 500
+)
+
+m1

@@ -516,65 +516,6 @@ ggarrange(a, ordplot, c, d, ordplot_euk,
 dev.off()
 
 
-
-
-
-
-
-
-#separate out seasons for separate panel figures
-physeq_fall <- subset_samples(physeq_npn, Season == 'Fall')
-physeq_spri <- subset_samples(physeq_npn, Season == 'Spring')
-physeq_summ <- subset_samples(physeq_npn, Season == 'Summer')
-physeq_wint <- subset_samples(physeq_npn, Season == 'Winter')
-
-#calculate beta div with unifrac dissimilarity matrix
-ord_f = ordinate(physeq_fall, method="PCoA", distance="unifrac")
-#create plot
-ordplot_f=plot_ordination(physeq_fall, ord_f, color="Year", shape = 'Season') +
-  scale_color_manual(values = c('#8A6C64', '#92250B')) +
-  scale_shape_manual(values=c(15)) + geom_point(size = 5) +
-  theme(legend.position="bottom")
-
-ordplot_f
-
-#calculate beta div with unifrac dissimilarity matrix
-ord_s = ordinate(physeq_summ, method="PCoA", distance="unifrac")
-#create plot
-ordplot_s=plot_ordination(physeq_summ, ord_s, color="Year", shape = 'Season') +
-  scale_color_manual(values = c('#E0C08E', '#E49417')) +
-  scale_shape_manual(values=c(16)) + geom_point(size = 5) +
-  theme(legend.position="bottom")
-
-ordplot_s
-
-#calculate beta div with unifrac dissimilarity matrix
-ord_w = ordinate(physeq_wint, method="PCoA", distance="unifrac")
-#create plot
-ordplot_w=plot_ordination(physeq_wint, ord_w, color="Year", shape = 'Season') +
-  scale_color_manual(values = c('#8E91E0', '#141BDC')) +
-  scale_shape_manual(values=c(17)) + geom_point(size = 5) +
-  theme(legend.position="bottom")
-
-ordplot_w
-
-#calculate beta div with unifrac dissimilarity matrix
-ord_t = ordinate(physeq_npn, method="PCoA", distance="unifrac")
-#create plot
-ordplot_t=plot_ordination(physeq_npn, ord_t, color="Year", shape = 'Season') +
-  scale_color_manual(values = c('#BBD8C2','#1F8334')) +
-  scale_shape_manual(values=c(15,18,16,17)) + geom_point(size = 5) 
-
-ordplot_t
-
-theme_set(theme_classic(base_size = 14))
-tiff("FIG2.TIF", width = 3000, height = 3000, res=300)
-ggarrange(ordplot_t, ordplot_f, ordplot_s, ordplot_w, 
-          labels = c("A.", "B.", 'C.', 'D.'),
-          nrow = 2, ncol = 2)
-dev.off()
-
-
 # Figure 3 ----------------------------------------------------------------
 #### core microbiome 
 preparing_data_for_core <- function(physeq) {
@@ -833,6 +774,173 @@ dev.off()
 
 # Figure 4 ----------------------------------------------------------------
 
+pig1 <- subset_samples(physeq_npn, pig == '1')
+pig2 <- subset_samples(physeq_npn, pig == '2')
+pig3 <- subset_samples(physeq_npn, pig == '3')
+pig4 <- subset_samples(physeq_npn, pig == '4')
+pig5 <- subset_samples(physeq_npn, pig == '5')
+
+#changes these for all the pigs 1-5
+#make sure you delete all the empty rows and columns, throws error
+meta_mic_feast <-Load_metadata(metadata_path = "aquatic_bones_lucas_grant_meta_FEAST_pig1.txt")
+
+otu_mic_feast <- data.frame(otu_table(pig1))
+write.table(otu_mic_feast, 'otu_mic_feast_pig5.txt')
+
+#move over column names by one in excel 
+otu_mic_feast <- Load_CountMatrix(CountMatrix_path = "otu_mic_feast_pig1.txt")
+
+FEAST_output <- FEAST(C = otu_mic_feast, metadata = meta_mic_feast, 
+                      different_sources_flag = 0,
+                      dir_path = "C:/Users/sierr/Documents/Lucas_grant_project/R_scripts",
+                      outfile="micro_FEAST_pig1")
+
+
+
+PlotSourceContribution(SinkNames = rownames(FEAST_output)[c(5:8)],
+                       SourceNames = colnames(FEAST_output), dir_path = "C:/Users/sierr/Documents/Lucas_grant_project/R_scripts",
+                       mixing_proportions = FEAST_output, Plot_title = "Micro_pig1",Same_sources_flag = 0, N = 4)
+
+# Make Boxplots for Source Sink
+FEAST_avg <- read.csv("FEAST_ExIn_percent.csv")
+FEAST_avg$date <- factor(FEAST_avg$date, levels = c('8/20/2018', '10/25/2018', '1/22/2019',
+                                                    '4/23/2019', '7/26/2019', '10/26/2019',
+                                                    '1/24/2020'))
+
+FEAST_avg$Percent_Source <- FEAST_avg$Percent_Source * 100
+
+p1 <- ggline(FEAST_avg, x='date', y='Percent_Source', color = 'SourceSink', 
+            add = c("mean_se", "dotplot"),
+            palette = c("#00AFBB", "#E7B800")) + xlab('Collection Date') + 
+            ylab('Percent Source Contribution (%)') +
+            labs(col = 'Source') 
+
+p1
+
+##mycobiome
+pig1 <- subset_samples(physeq_npn_euk, pig == '1')
+pig2 <- subset_samples(physeq_npn_euk, pig == '2')
+pig3 <- subset_samples(physeq_npn_euk, pig == '3')
+pig4 <- subset_samples(physeq_npn_euk, pig == '4')
+pig5 <- subset_samples(physeq_npn_euk, pig == '5')
+
+#changes these for all the pigs 1-5
+#make sure you delete all the empty rows and columns, throws error
+meta_mic_feast <-Load_metadata(metadata_path = "aquatic_bones_lucas_grant_metadata_euks_FEAST_pig4.txt")
+
+otu_mic_feast <- data.frame(otu_table(pig4))
+write.table(otu_mic_feast, 'otu_mic_feast_euks_pig4.txt')
+
+#move over column names by one in excel 
+otu_mic_feast <- Load_CountMatrix(CountMatrix_path = "otu_mic_feast_euks_pig4.txt")
+
+FEAST_output <- FEAST(C = otu_mic_feast, metadata = meta_mic_feast, 
+                      different_sources_flag = 0,
+                      dir_path = "C:/Users/sierr/Documents/Lucas_grant_project/R_scripts",
+                      outfile="micro_FEAST_euk_pig4")
+
+
+# Make Boxplots for Source Sink
+FEAST_avg <- read.csv("FEAST_ExIn_percent_euk.csv")
+FEAST_avg$date <- factor(FEAST_avg$date, levels = c('8/20/2018', '10/25/2018', '1/22/2019',
+                                                    '4/23/2019', '7/26/2019', '10/26/2019',
+                                                    '1/24/2020'))
+
+FEAST_avg$Percent_Source <- FEAST_avg$Percent_Source * 100
+
+p2 <- ggline(FEAST_avg, x='date', y='Percent_Source', color = 'SourceSink',
+            add = c("mean_se", "dotplot"),
+            palette = c("#78B474", "#86759B")) + xlab('Collection Date') + 
+            ylab('Percent Source Contribution (%)') +
+            labs(col = 'Source')  
+
+p2
+
+theme_set(theme_classic(base_size = 18))
+tiff("FIG4.TIF", width = 4000, height = 2000, res=300)
+ggarrange(p1,p2, 
+          labels = c("A.", "B."),
+          ncol = 2)
+dev.off()
+
+
+
+
+# Figure 5 ----------------------------------------------------------------
+
+feast_output <- read.csv('timeseries_FEAST.csv')
+
+feast_op_micro <- feast_output %>% filter(Community == 'Microbiome')
+
+feast_op_micro$Compare <- factor(feast_op_micro$Compare, levels = c('Comp1', 'Other1',
+                                                                    'Comp2', 'Other2',
+                                                                    'Comp3', 'Other3',
+                                                                    'Comp4', 'Other4',
+                                                                    'Comp5', 'Other5',
+                                                                    'Comp6', 'Other6'
+                                                                    
+))
+
+p <- ggplot(feast_op_micro, aes(x=Compare, y=Contribution, fill = Compare)) + 
+  geom_boxplot() + scale_fill_manual(values = c ('#2EABA8', '#87B4B3',
+                                                 '#254FB6', '#8794B4',
+                                                 '#5A25B6', '#927DB6',
+                                                 '#A412B8', '#AF7DB6',
+                                                 '#B81292', '#B972A9',
+                                                 '#BC2357', "#B9728A"
+  )) + theme(legend.position = "none", 
+             axis.text.x = element_text(angle = 90)) +
+  xlab('Collection Timepoint Comparisons') + ylab('Proportion of Contribution') +
+  scale_x_discrete(labels=c("Comp1" = "1 to 2", "Other1" = "1 to 3-7",
+                            "Comp2" = "2 to 3", "Other2" = "2 to 1 & 4-7",
+                            "Comp3" = "3 to 4", "Other3" = "3 to 1-2 & 5-7",
+                            "Comp4" = "4 to 5", "Other4" = "4 to 1-3 & 6-7",
+                            "Comp5" = "5 to 6", "Other5" = "5 to 1-4 & 7",
+                            "Comp6" = "6 to 7", "Other6" = "6 to 1-5"))
+p
+
+
+feast_op_myco <- feast_output %>% filter(Community == 'Mycobiome')
+
+feast_op_myco$Compare <- factor(feast_op_myco$Compare, levels = c('Comp1', 'Other1',
+                                                                  'Comp2', 'Other2',
+                                                                  'Comp3', 'Other3',
+                                                                  'Comp4', 'Other4',
+                                                                  'Comp5', 'Other5',
+                                                                  'Comp6', 'Other6'
+                                                                  
+))
+
+q <- ggplot(feast_op_myco, aes(x=Compare, y=Contribution, fill = Compare)) + 
+  geom_boxplot() + scale_fill_manual(values = c ('#BE5821', '#D19A7C',
+                                                 '#D5B01B', '#D1C07C',
+                                                 '#8CD51B', '#B4D581',
+                                                 '#16CF23', '#81D587',
+                                                 '#16CF82', '#7BCBAA',
+                                                 '#1ECCC8', "#7BCBC9"
+  )) + theme(legend.position = "none", 
+             axis.text.x = element_text(angle = 90)) +
+  xlab('Collection Timepoint Comparisons') + ylab('Proportion of Contribution') +
+  scale_x_discrete(labels=c("Comp1" = "1 to 2", "Other1" = "1 to 3-7",
+                            "Comp2" = "2 to 3", "Other2" = "2 to 1 & 4-7",
+                            "Comp3" = "3 to 4", "Other3" = "3 to 1-2 & 5-7",
+                            "Comp4" = "4 to 5", "Other4" = "4 to 1-3 & 6-7",
+                            "Comp5" = "5 to 6", "Other5" = "5 to 1-4 & 7",
+                            "Comp6" = "6 to 7", "Other6" = "6 to 1-5"))
+q
+
+theme_set(theme_classic(base_size = 16))
+tiff("FIG5.TIF", width = 3000, height = 4000, res=300)
+ggarrange(p,q, 
+          labels = c("A.", "B."),
+          nrow = 2, ncol = 2)
+dev.off()
+
+
+# Figure 6 --------------------------------------------------------------
+
+
+
 #build random forest model
 otu <- as.data.frame(t(otu_table(physeq_npn)))
 otu$SampleID <- rownames(otu)
@@ -856,20 +964,21 @@ pred <- as.data.frame(pred)
 colnames(pred) <- 'Predicted'
 
 #using the mean square error to determine the true value
-pred[pred$Predicted < 7.851, "True"] <- '7'
-pred[pred$Predicted < 6.851, "True"] <- '6'
-pred[pred$Predicted < 5.851, "True"] <- '5'
-pred[pred$Predicted < 4.851, "True"] <- '4'
-pred[pred$Predicted < 3.851, "True"] <- '3'
-pred[pred$Predicted < 2.851, "True"] <- '2'
-pred[pred$Predicted < 1.851, "True"] <- '1'
+pred[pred$Predicted < 7.800, "True"] <- '7'
+pred[pred$Predicted < 6.800, "True"] <- '6'
+pred[pred$Predicted < 5.800, "True"] <- '5'
+pred[pred$Predicted < 4.800, "True"] <- '4'
+pred[pred$Predicted < 3.800, "True"] <- '3'
+pred[pred$Predicted < 2.800, "True"] <- '2'
+pred[pred$Predicted < 1.800, "True"] <- '1'
 
 pred$True <- as.numeric(pred$True)
 
 #plotting predicted vs. true
 ggplotRegression <- function(fit){
   
-  ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1]), 
+         color = ) + 
     geom_abline(slope =0, intercept = 0, color='black') +
     geom_vline(xintercept = 0, color='black') +
     stat_smooth(method = "lm", col = "red") 
@@ -877,9 +986,10 @@ ggplotRegression <- function(fit){
 
 #plot it
 d <- ggplotRegression(lm(Predicted ~ True, data = pred)) +
-  geom_pointrange(aes(ymin = Predicted-0.851, ymax = Predicted+0.851), 
-                  position=position_jitter(width=0.5), alpha = 0.5) 
-
+  geom_pointrange(aes(ymin = Predicted-0.800, ymax = Predicted+0.800), 
+                  position=position_jitter(width=0.5), alpha = 0.5) + xlab ('True Collection Date') +
+  ylab('Predicted Collecion Date')
+d
 #gives the regression line
 lm_eqn <- function(df){
   m <- lm(Predicted ~ True, df);
@@ -893,7 +1003,7 @@ lm_eqn <- function(df){
 d1 <- d + geom_text(x = 2, y = 6, label = lm_eqn(pred), parse = TRUE)
 
 theme_set(theme_classic(base_size = 18))
-tiff("FIG4.TIF", width = 2500, height = 2500, res=300)
+tiff("FIG6.TIF", width = 2500, height = 2500, res=300)
 d1
 dev.off()
 
