@@ -1,0 +1,51 @@
+date,pig,Percent_Source,SourceSink
+8/20/2018,1,0.546279734,External - Internal Mycobiome
+10/25/2018,1,0.015267394,External - Internal Mycobiome
+1/22/2019,1,0.035128158,External - Internal Mycobiome
+4/23/2019,1,0.146742584,External - Internal Mycobiome
+7/26/2019,1,0.01312371,External - Internal Mycobiome
+10/26/2019,1,0.257152707,External - Internal Mycobiome
+1/24/2020,1,0.003878449,External - Internal Mycobiome
+8/20/2018,2,0.761595932,External - Internal Mycobiome
+10/25/2018,2,0.473519987,External - Internal Mycobiome
+1/22/2019,2,0.270473666,External - Internal Mycobiome
+4/23/2019,2,0.004723294,External - Internal Mycobiome
+10/26/2019,2,0.065080306,External - Internal Mycobiome
+8/20/2018,3,0.204687819,External - Internal Mycobiome
+10/25/2018,3,0.10005725,External - Internal Mycobiome
+1/22/2019,3,0.073080862,External - Internal Mycobiome
+4/23/2019,3,8.19E-89,External - Internal Mycobiome
+8/20/2018,4,0.035004542,External - Internal Mycobiome
+10/25/2018,4,0.22687248,External - Internal Mycobiome
+10/26/2019,4,0.009884756,External - Internal Mycobiome
+1/24/2020,4,0.265248775,External - Internal Mycobiome
+8/20/2018,5,0.14001333,External - Internal Mycobiome
+10/25/2018,5,0.427010965,External - Internal Mycobiome
+1/22/2019,5,0.086165318,External - Internal Mycobiome
+10/26/2019,5,0.22327715,External - Internal Mycobiome
+1/24/2020,5,0.179463639,External - Internal Mycobiome
+8/20/2018,1,0.39021785,Unknown
+10/25/2018,1,0.592084194,Unknown
+1/22/2019,1,0.802162264,Unknown
+4/23/2019,1,0.563088609,Unknown
+7/26/2019,1,0.616346767,Unknown
+10/26/2019,1,0.550885489,Unknown
+1/24/2020,1,0.546029791,Unknown
+8/20/2018,2,0.232997378,Unknown
+10/25/2018,2,0.443142782,Unknown
+1/22/2019,2,0.337775798,Unknown
+4/23/2019,2,0.707782816,Unknown
+10/26/2019,2,0.544404593,Unknown
+8/20/2018,3,0.795244954,Unknown
+10/25/2018,3,0.382570247,Unknown
+1/22/2019,3,0.454905506,Unknown
+4/23/2019,3,0.522714035,Unknown
+8/20/2018,4,0.592157274,Unknown
+10/25/2018,4,0.770593275,Unknown
+10/26/2019,4,0.483774606,Unknown
+1/24/2020,4,0.569817747,Unknown
+8/20/2018,5,0.758687251,Unknown
+10/25/2018,5,0.441192533,Unknown
+1/22/2019,5,0.325169132,Unknown
+10/26/2019,5,0.566699727,Unknown
+1/24/2020,5,0.607391248,Unknown

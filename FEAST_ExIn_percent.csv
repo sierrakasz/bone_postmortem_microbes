@@ -1,0 +1,59 @@
+date,pig,Percent_Source,SourceSink
+8/20/2018,1,0.720807695,External - Internal Microbiome
+10/25/2018,1,0.355018984,External - Internal Microbiome
+1/22/2019,1,0.117540528,External - Internal Microbiome
+4/23/2019,1,0.002529653,External - Internal Microbiome
+7/26/2019,1,0.025629653,External - Internal Microbiome
+10/26/2019,1,0.004981812,External - Internal Microbiome
+1/24/2020,1,0.002187456,External - Internal Microbiome
+8/20/2018,2,0.667523367,External - Internal Microbiome
+10/25/2018,2,0.355066611,External - Internal Microbiome
+1/22/2019,2,0.196579759,External - Internal Microbiome
+4/23/2019,2,0.048912507,External - Internal Microbiome
+10/26/2019,2,0.003371855,External - Internal Microbiome
+8/20/2018,3,0.222209883,External - Internal Microbiome
+10/25/2018,3,0.338500777,External - Internal Microbiome
+1/22/2019,3,0.260065153,External - Internal Microbiome
+4/23/2019,3,0.003578077,External - Internal Microbiome
+10/26/2019,3,0.017025241,External - Internal Microbiome
+1/24/2020,3,5.39E-54,External - Internal Microbiome
+8/20/2018,4,0.843906057,External - Internal Microbiome
+10/25/2018,4,0.240839763,External - Internal Microbiome
+7/26/2019,4,0.002634637,External - Internal Microbiome
+10/26/2019,4,0.000785397,External - Internal Microbiome
+1/24/2020,4,0.212866035,External - Internal Microbiome
+8/20/2018,5,0.620266148,External - Internal Microbiome
+10/25/2018,5,0.604581581,External - Internal Microbiome
+4/23/2019,5,0.152556154,External - Internal Microbiome
+7/26/2019,5,0.028552083,External - Internal Microbiome
+10/26/2019,5,0.375996686,External - Internal Microbiome
+1/24/2020,5,0.018693587,External - Internal Microbiome
+8/20/2018,1,0.278269873,Unknown
+10/25/2018,1,0.396909748,Unknown
+1/22/2019,1,0.313907695,Unknown
+4/23/2019,1,0.425492276,Unknown
+7/26/2019,1,0.387442473,Unknown
+10/26/2019,1,0.592419388,Unknown
+1/24/2020,1,0.542031539,Unknown
+8/20/2018,2,0.332476633,Unknown
+10/25/2018,2,0.422238158,Unknown
+1/22/2019,2,0.443700808,Unknown
+4/23/2019,2,0.406474788,Unknown
+10/26/2019,2,0.44639598,Unknown
+8/20/2018,3,0.756100168,Unknown
+10/25/2018,3,0.329688725,Unknown
+1/22/2019,3,0.37333541,Unknown
+4/23/2019,3,0.578914416,Unknown
+10/26/2019,3,0.516407247,Unknown
+1/24/2020,3,0.489671371,Unknown
+8/20/2018,4,0.154803208,Unknown
+10/25/2018,4,0.462620607,Unknown
+7/26/2019,4,0.49328319,Unknown
+10/26/2019,4,0.447494942,Unknown
+1/24/2020,4,0.391660918,Unknown
+8/20/2018,5,0.3759109,Unknown
+10/25/2018,5,0.291192991,Unknown
+4/23/2019,5,0.440865375,Unknown
+7/26/2019,5,0.337895789,Unknown
+10/26/2019,5,0.393805624,Unknown
+1/24/2020,5,0.469760247,Unknown
