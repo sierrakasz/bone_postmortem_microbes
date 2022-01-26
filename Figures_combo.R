@@ -939,8 +939,6 @@ dev.off()
 
 # Figure 6 --------------------------------------------------------------
 
-
-
 #build random forest model
 otu <- as.data.frame(t(otu_table(physeq_npn)))
 otu$SampleID <- rownames(otu)
@@ -962,6 +960,8 @@ m1
 pred <- m1$predicted
 pred <- as.data.frame(pred)
 colnames(pred) <- 'Predicted'
+
+sqrt(m1$mse[which.min(m1$mse)])
 
 #using the mean square error to determine the true value
 pred[pred$Predicted < 7.800, "True"] <- '7'
@@ -988,7 +988,7 @@ ggplotRegression <- function(fit){
 d <- ggplotRegression(lm(Predicted ~ True, data = pred)) +
   geom_pointrange(aes(ymin = Predicted-0.800, ymax = Predicted+0.800), 
                   position=position_jitter(width=0.5), alpha = 0.5) + xlab ('True Collection Date') +
-  ylab('Predicted Collecion Date')
+  ylab('Predicted Collection Date')
 d
 #gives the regression line
 lm_eqn <- function(df){
@@ -1000,11 +1000,76 @@ lm_eqn <- function(df){
   as.character(as.expression(eq));
 }
 
-d1 <- d + geom_text(x = 2, y = 6, label = lm_eqn(pred), parse = TRUE)
+d1 <- d + geom_text(x = 2, y = 6.5, label = lm_eqn(pred), parse = TRUE)
+
+#build random forest model
+otu <- as.data.frame(t(otu_table(physeq_npn)))
+otu$SampleID <- rownames(otu)
+meta_sa <- metadata %>% select(SampleID, add)
+meta_sa$add <- as.numeric(meta_sa$add)
+otu <- merge(meta_sa, otu, by = 'SampleID')
+otu <- otu[,-1]
+names(otu) <- make.names(names(otu))
+
+m1 <- randomForest(
+  formula = add ~ .,
+  data    = otu,
+  ntree= 500
+)
+
+m1
+
+#pull out the predicted values from the RF regression
+pred <- m1$predicted
+pred <- as.data.frame(pred)
+colnames(pred) <- 'Predicted'
+
+sqrt(m1$mse[which.min(m1$mse)])
+
+#using the mean square error to determine the true value
+pred[pred$Predicted < 6987, "True"] <- '6763'
+pred[pred$Predicted < 5987, "True"] <- '6263'
+pred[pred$Predicted < 4987, "True"] <- '4369'
+pred[pred$Predicted < 3987, "True"] <- '2606'
+pred[pred$Predicted < 2987, "True"] <- '2124'
+pred[pred$Predicted < 1987, "True"] <- '1754'
+pred[pred$Predicted < 987, "True"] <- '518'
+
+pred$True <- as.numeric(pred$True)
+
+#plotting predicted vs. true
+ggplotRegression <- function(fit){
+  
+  ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1]), 
+         color = ) + 
+    geom_abline(slope =0, intercept = 0, color='black') +
+    geom_vline(xintercept = 0, color='black') +
+    stat_smooth(method = "lm", col = "red") 
+}
+
+#plot it
+e <- ggplotRegression(lm(Predicted ~ True, data = pred)) +
+  geom_pointrange(aes(ymin = Predicted-987, ymax = Predicted+987), 
+                  position=position_jitter(width=500), alpha = 0.5) + xlab ('True ADD') +
+  ylab('Predicted ADD')
+e
+#gives the regression line
+lm_eqn <- function(df){
+  m <- lm(Predicted ~ True, df);
+  eq <- substitute(italic(Predicted) == a + b %.% italic(True)*","~~italic(r)^2~"="~r2, 
+                   list(a = format(unname(coef(m)[1]), digits = 2),
+                        b = format(unname(coef(m)[2]), digits = 2),
+                        r2 = format(summary(m)$r.squared, digits = 3)))
+  as.character(as.expression(eq));
+}
+
+e1 <- e + geom_text(x = 2500, y = 6500, label = lm_eqn(pred), parse = TRUE)
 
 theme_set(theme_classic(base_size = 18))
-tiff("FIG6.TIF", width = 2500, height = 2500, res=300)
-d1
+tiff("FIG6.TIF", width = 4000, height = 2500, res=300)
+ggarrange(d1,e1, 
+          labels = c("A.", "B."),
+          nrow = 2, ncol = 2)
 dev.off()
 
 

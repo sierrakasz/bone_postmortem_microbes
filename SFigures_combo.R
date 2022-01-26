@@ -138,13 +138,19 @@ physeq_7000 <- rarefy_even_depth(physeq_trim, sample.size = 7000)
 physeq_7000
 #2475, 65 samples
 
+#removes positive and negative control samples
+physeq_in <- subset_samples(physeq_7000, sample_type == 'internal_microbiome')
+physeq_ex <- subset_samples(physeq_7000, sample_type == 'external_microbiome')
+physeq_npn <- merge_phyloseq(physeq_in, physeq_ex)
+
+
 
 # Figure S2 ---------------------------------------------------------------
 
 #determine what to rarefy to
 #show rarefaction curves
 tiff("SFIG2.TIF", width = 2000, height = 1500, res=300)
-rarecurve(t(otu_table(physeq_trim_euk)), step=1000, cex=0.3)
+rarecurve(t(otu_table(physeq_trim_euk)), step=300, cex=0.3)
 dev.off()
 #4000
 
@@ -158,3 +164,26 @@ physeq_in_euk <- subset_samples(physeq_4000, sample_type == 'internal_microbiome
 physeq_ex_euk <- subset_samples(physeq_4000, sample_type == 'external_microbiome')
 
 physeq_npn_euk <- merge_phyloseq(physeq_in_euk, physeq_ex_euk)
+
+
+# Figure S3--------------------------------------------------------------
+#completed in PowerPoint
+
+
+# Figure S4 ---------------------------------------------------------------
+
+physeq_npn_pruned <- prune_taxa(names(sort(taxa_sums(physeq_npn),TRUE)[1:50]), physeq_npn)
+a <- plot_heatmap(physeq_npn_pruned, "MDS", 'unifrac', "sample_type", "Family",  
+             low="#000033", high="#FF3300", sample.order = "date_collected", taxa.order = "Family")
+
+physeq_npn_euk_pruned <- prune_taxa(names(sort(taxa_sums(physeq_npn_euk),TRUE)[1:50]), physeq_npn_euk)
+b <- plot_heatmap(physeq_npn_euk_pruned, "MDS", 'unifrac', "sample_type", "Family",  
+             low="#14BC22", high="#EEDA33", sample.order = "date_collected", taxa.order = "Family")
+
+
+theme_set(theme_classic(base_size = 18))
+tiff("SFIG4.TIF", width = 4500, height = 1750, res=300)
+ggarrange(a, b, 
+          labels = c("A.", "B."),
+          nrow = 1, ncol = 2)
+dev.off()

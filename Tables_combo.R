@@ -150,7 +150,7 @@ physeq_npn_euk <- merge_phyloseq(physeq_in_euk, physeq_ex_euk)
 
 # Table 3 -----------------------------------------------------------------
 
-# Random forest regression of ADH using out-of-bag (OOB) classification and 500 decision trees.
+# Random forest regression of collection date using out-of-bag (OOB) classification and 500 decision trees.
 # Variation explained, mean square residuals, and mean square error are reported. 
 
 ### Microbiome

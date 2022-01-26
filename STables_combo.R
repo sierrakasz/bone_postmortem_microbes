@@ -2151,54 +2151,6 @@ for(i in 1:length(date_list)) {
 
 # Table S13 ---------------------------------------------------------------
 
-otu <- as.data.frame(t(otu_table(physeq_npn)))
-otu$SampleID <- rownames(otu)
-meta_sa <- metadata %>% select(SampleID, date_collected)
-meta_sa$date_collected <- as.numeric(meta_sa$date_collected)
-otu <- merge(meta_sa, otu, by = 'SampleID')
-otu <- otu[,-1]
-names(otu) <- make.names(names(otu))
-
-m1 <- randomForest(
-  formula = date_collected ~ .,
-  data    = otu,
-  ntree= 500
-)
-
-m1
-
-#let's see what the contributing taxa are
-imp <- importance(m1)
-imp <- data.frame(predictors = rownames(imp), imp)
-imp.sort <- arrange(imp, desc(IncNodePurity))
-imp.sort$predictors <- factor(imp.sort$predictors, levels = imp.sort$predictors)
-imp.100 <- imp.sort[1:100, ]
-imp.100$predictors<- gsub('X', '', imp.100$predictors)
-tax <- data.frame(tax_table(physeq))
-tax <- tax %>% select(Kingdom, Phylum, Class, Order, Family, Genus)
-tax$predictors <- rownames(tax)
-imp.100 <- merge(imp.100, tax)
-
-# Table S14 ---------------------------------------------------------------
-
-otu <- as.data.frame(t(otu_table(physeq_npn)))
-otu$SampleID <- rownames(otu)
-meta_sa <- metadata %>% select(SampleID, adh)
-meta_sa$adh <- as.numeric(meta_sa$adh)
-otu <- merge(meta_sa, otu, by = 'SampleID')
-otu <- otu[,-1]
-names(otu) <- make.names(names(otu))
-
-m1 <- randomForest(
-  formula = adh ~ .,
-  data    = otu,
-  ntree= 500
-)
-
-m1
-
-# Table S15 ---------------------------------------------------------------
-
 ## Microbiome
 # Internal
 #change this for all of the date combos
@@ -2291,14 +2243,208 @@ feast_op_micro %>% group_by(Compare) %>% summarise_at(c('Contribution'), funs(me
 feast_op_myco <- feast_output %>% filter(Community == 'Mycobiome')
 
 feast_op_myco$Compare <- factor(feast_op_myco$Compare, levels = c('Comp1', 'Other1',
-                                                                    'Comp2', 'Other2',
-                                                                    'Comp3', 'Other3',
-                                                                    'Comp4', 'Other4',
-                                                                    'Comp5', 'Other5',
-                                                                    'Comp6', 'Other6'
-                                                                    
+                                                                  'Comp2', 'Other2',
+                                                                  'Comp3', 'Other3',
+                                                                  'Comp4', 'Other4',
+                                                                  'Comp5', 'Other5',
+                                                                  'Comp6', 'Other6'
+                                                                  
 ))
 
 
 feast_op_myco %>% group_by(Compare) %>% summarise_at(c('Contribution'), funs(mean, sd))
 
+
+# Table S14 ---------------------------------------------------------------
+otu <- as.data.frame(t(otu_table(physeq_npn)))
+otu$SampleID <- rownames(otu)
+meta_sa <- metadata %>% select(SampleID, date_collected)
+meta_sa$date_collected <- as.numeric(meta_sa$date_collected)
+otu <- merge(meta_sa, otu, by = 'SampleID')
+otu <- otu[,-1]
+names(otu) <- make.names(names(otu))
+
+m1 <- randomForest(
+  formula = date_collected ~ .,
+  data    = otu,
+  ntree= 500
+)
+
+m1
+
+#let's see what the contributing taxa are
+imp <- importance(m1)
+imp <- data.frame(predictors = rownames(imp), imp)
+imp.sort <- arrange(imp, desc(IncNodePurity))
+imp.sort$predictors <- factor(imp.sort$predictors, levels = imp.sort$predictors)
+imp.100 <- imp.sort[1:100, ]
+imp.100$predictors<- gsub('X', '', imp.100$predictors)
+tax <- data.frame(tax_table(physeq))
+tax <- tax %>% select(Kingdom, Phylum, Class, Order, Family, Genus)
+tax$predictors <- rownames(tax)
+imp.100 <- merge(imp.100, tax)
+
+
+# Table S15 ---------------------------------------------------------------
+# Random forest regression of add using out-of-bag (OOB) classification and 500 decision trees.
+# Variation explained, mean square residuals, and mean square error are reported. 
+
+### Microbiome
+#first model - all samples OOB
+otu <- as.data.frame(t(otu_table(physeq_npn)))
+otu$SampleID <- rownames(otu)
+meta_sa <- metadata %>% select(SampleID, add)
+meta_sa$add <- as.numeric(meta_sa$add)
+otu <- merge(meta_sa, otu, by = 'SampleID')
+otu <- otu[,-1]
+names(otu) <- make.names(names(otu))
+
+m1 <- randomForest(
+  formula = add ~ .,
+  data    = otu,
+  ntree= 500
+)
+
+m1
+sqrt(m1$mse[which.min(m1$mse)])
+
+#second model - all samples test set error
+
+valid_split <- initial_split(otu, .8)
+otu_train <- analysis(valid_split)
+otu_valid <- assessment(valid_split)
+x_test <- otu_valid[setdiff(names(otu_valid), "add")]
+y_test <- otu_valid$add
+
+rf_oob_comp <- randomForest(
+  formula = add~ .,
+  data    = otu_train,
+  xtest   = x_test,
+  ytest   = y_test,
+  ntree = 500
+)
+
+oob <- sqrt(m1$mse)
+validation <- sqrt(rf_oob_comp$mse)
+
+# compare error rates
+tibble::tibble(
+  `Out of Bag Error` = oob,
+  `Test error` = validation,
+  ntrees = 1:rf_oob_comp$ntree
+) %>%
+  gather(Metric, Error, -ntrees) %>%
+  ggplot(aes(ntrees, Error, color = Metric)) +
+  geom_line() +
+  xlab("Number of trees")
+
+rf_oob_comp
+sqrt(m1$mse[which.min(rf_oob_comp$mse)])
+
+#decided on OOB over test/train
+
+#function to run random forest
+random_forest_date <- function(physeq) {
+  otu <- as.data.frame(t(otu_table(physeq)))
+  otu$SampleID <- rownames(otu)
+  meta_sa <- metadata %>% select(SampleID, add)
+  meta_sa$add <- as.numeric(meta_sa$add)
+  otu <- merge(meta_sa, otu, by = 'SampleID')
+  otu <- otu[,-1]
+  names(otu) <- make.names(names(otu))
+  
+  m1 <- randomForest(
+    formula = add ~ .,
+    data    = otu,
+    ntree= 500
+  )
+  
+  print(m1)
+  print(sqrt(m1$mse[which.min(m1$mse)]))
+}
+
+#model 3 - only internal microbiome
+random_forest_date(physeq_in)
+
+#model 4 - only external microbiome
+random_forest_date(physeq_ex)
+
+### Mycobiome
+#first model - all samples OOB
+otu <- as.data.frame(t(otu_table(physeq_npn_euk)))
+otu$SampleID <- rownames(otu)
+meta_sa <- metadata_euk %>% select(SampleID, add)
+meta_sa$add <- as.numeric(meta_sa$add)
+otu <- merge(meta_sa, otu, by = 'SampleID')
+otu <- otu[,-1]
+names(otu) <- make.names(names(otu))
+
+m1 <- randomForest(
+  formula = add ~ .,
+  data    = otu,
+  ntree= 500
+)
+
+m1
+sqrt(m1$mse[which.min(m1$mse)])
+
+#second model - all samples test set error
+
+valid_split <- initial_split(otu, .8)
+otu_train <- analysis(valid_split)
+otu_valid <- assessment(valid_split)
+x_test <- otu_valid[setdiff(names(otu_valid), "add")]
+y_test <- otu_valid$add
+
+rf_oob_comp <- randomForest(
+  formula = add~ .,
+  data    = otu_train,
+  xtest   = x_test,
+  ytest   = y_test,
+  ntree = 500
+)
+
+oob <- sqrt(m1$mse)
+validation <- sqrt(rf_oob_comp$mse)
+
+# compare error rates
+tibble::tibble(
+  `Out of Bag Error` = oob,
+  `Test error` = validation,
+  ntrees = 1:rf_oob_comp$ntree
+) %>%
+  gather(Metric, Error, -ntrees) %>%
+  ggplot(aes(ntrees, Error, color = Metric)) +
+  geom_line() +
+  xlab("Number of trees")
+
+rf_oob_comp
+sqrt(m1$mse[which.min(rf_oob_comp$mse)])
+
+#decided on OOB over test/train
+
+#function to run random forest
+random_forest_date <- function(physeq) {
+  otu <- as.data.frame(t(otu_table(physeq)))
+  otu$SampleID <- rownames(otu)
+  meta_sa <- metadata_euk %>% select(SampleID, add)
+  meta_sa$add <- as.numeric(meta_sa$add)
+  otu <- merge(meta_sa, otu, by = 'SampleID')
+  otu <- otu[,-1]
+  names(otu) <- make.names(names(otu))
+  
+  m1 <- randomForest(
+    formula = add ~ .,
+    data    = otu,
+    ntree= 500
+  )
+  
+  print(m1)
+  print(sqrt(m1$mse[which.min(m1$mse)]))
+}
+
+#model 3 - only internal mycobiome
+random_forest_date(physeq_in_euk)
+
+#model 4 - only external mycobiome
+random_forest_date(physeq_ex_euk)
